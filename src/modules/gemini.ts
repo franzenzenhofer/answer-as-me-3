@@ -4,9 +4,12 @@
 namespace Gemini {
   /**
    * Make API call with retry logic
+   * Handles 429 (rate limit), 408 (timeout), and 5xx errors with Retry-After support
    */
   export function fetchWithRetry(url: string, options: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions): GoogleAppsScript.URL_Fetch.HTTPResponse {
     const maxAttempts = Config.GEMINI.RETRY_ATTEMPTS + 1;
+    const maxTotalWaitMs = 10000; // 10 second max total wait
+    let totalWaitMs = 0;
     let lastError: Error | null = null;
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -14,15 +17,60 @@ namespace Gemini {
         const response = UrlFetchApp.fetch(url, options);
         const code = response.getResponseCode();
         
-        // Retry on 5xx errors with exponential backoff and jitter
-        if (code >= 500 && code < 600 && attempt < maxAttempts - 1) {
-          const backoffMs = Algorithms.calculateBackoffWithJitter(
-            attempt,
-            Config.GEMINI.RETRY_BACKOFF_MS,
-            10000 // 10 second max
-          );
-          Utils.sleep(backoffMs);
-          continue;
+        // Check if we should retry: 429 (rate limit), 408 (timeout), or 5xx errors
+        const shouldRetry = (code === 429 || code === 408 || (code >= 500 && code < 600)) 
+                           && attempt < maxAttempts - 1;
+        
+        if (shouldRetry) {
+          let backoffMs: number;
+          
+          // Check for Retry-After header (can be seconds or HTTP date)
+          const headers = response.getHeaders() as {[key: string]: string};
+          const retryAfterHeader = headers['Retry-After'] || headers['retry-after'];
+          
+          if (retryAfterHeader) {
+            // Parse Retry-After header
+            const retryAfterNum = parseInt(retryAfterHeader, 10);
+            if (!isNaN(retryAfterNum)) {
+              // It's a number of seconds
+              backoffMs = retryAfterNum * 1000;
+              AppLogger.info(`Using Retry-After header: ${retryAfterNum}s`, { code, attempt });
+            } else {
+              // Try to parse as HTTP date
+              const retryDate = new Date(retryAfterHeader);
+              if (!isNaN(retryDate.getTime())) {
+                backoffMs = Math.max(0, retryDate.getTime() - Date.now());
+                AppLogger.info(`Using Retry-After date: ${retryAfterHeader}`, { code, attempt });
+              } else {
+                // Fall back to exponential backoff if header is invalid
+                backoffMs = Algorithms.calculateBackoffWithJitter(
+                  attempt,
+                  Config.GEMINI.RETRY_BACKOFF_MS,
+                  maxTotalWaitMs - totalWaitMs
+                );
+              }
+            }
+          } else {
+            // No Retry-After header, use exponential backoff with jitter
+            backoffMs = Algorithms.calculateBackoffWithJitter(
+              attempt,
+              Config.GEMINI.RETRY_BACKOFF_MS,
+              maxTotalWaitMs - totalWaitMs
+            );
+          }
+          
+          // Cap the wait time to avoid exceeding max total wait
+          backoffMs = Math.min(backoffMs, maxTotalWaitMs - totalWaitMs);
+          
+          if (backoffMs > 0 && totalWaitMs + backoffMs <= maxTotalWaitMs) {
+            AppLogger.info(`Retrying after ${backoffMs}ms`, { code, attempt, totalWaitMs });
+            Utils.sleep(backoffMs);
+            totalWaitMs += backoffMs;
+            continue;
+          } else {
+            AppLogger.warn('Max retry wait time exceeded', { totalWaitMs, maxTotalWaitMs });
+            break;
+          }
         }
         
         return response;
@@ -100,11 +148,12 @@ namespace Gemini {
   }
   
   /**
-   * Parse Gemini response
+   * Parse Gemini response - NO FALLBACKS, real responses only
    */
   export function parseResponse(responseText: string): Types.GeminiResponse | null {
     const jsonText = extractJsonFromResponse(responseText);
     if (!jsonText) {
+      AppLogger.error('No JSON text extracted from response');
       return null;
     }
     
@@ -115,7 +164,15 @@ namespace Gemini {
       .replace(/```$/i, '')
       .trim();
     
-    return Utils.jsonParse<Types.GeminiResponse>(cleaned);
+    // Parse as JSON - fail if it doesn't parse
+    const parsed = Utils.jsonParse<Types.GeminiResponse>(cleaned);
+    
+    if (!parsed) {
+      AppLogger.error('Failed to parse Gemini response as JSON', { textLength: cleaned.length });
+      return null;
+    }
+    
+    return parsed;
   }
   
   /**

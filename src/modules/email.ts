@@ -8,8 +8,9 @@ const EMPTY_RECIPIENTS: Types.Recipients = { to: [], cc: [] };
    * Extract email addresses from a string
    * @complexity O(n) where n is string length
    */
-  // Pre-compiled regex for SPEED
+  // Pre-compiled regex for SPEED and RFC compliance
   const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig;
+  const EMAIL_WITH_NAME_REGEX = /(?:"?([^"<>]*)"?\s*)?<?([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})>?/ig;
   
   export function extractEmailAddresses(listStr: string | null | undefined): string[] {
     if (!listStr) {
@@ -19,6 +20,92 @@ const EMPTY_RECIPIENTS: Types.Recipients = { to: [], cc: [] };
     // FAST: Single regex exec instead of split + match
     const matches = listStr.match(EMAIL_REGEX);
     return matches || [];
+  }
+  
+  /**
+   * Normalize and validate email addresses
+   * - Extracts emails from display names
+   * - Removes duplicates (case-insensitive)
+   * - Validates RFC format
+   * - Removes current user and aliases
+   */
+  export function normalizeRecipients(
+    emails: string[], 
+    removeCurrentUser: boolean = true
+  ): string[] {
+    if (!emails || emails.length === 0) {
+      return [];
+    }
+    
+    const userEmails = removeCurrentUser ? getUserEmailAddresses() : new Set<string>();
+    const seen = new Set<string>();
+    const normalized: string[] = [];
+    
+    for (const email of emails) {
+      if (!email) continue;
+      
+      // Extract email from "Name <email>" format
+      let cleanEmail = email;
+      const nameMatch = EMAIL_WITH_NAME_REGEX.exec(email);
+      if (nameMatch && nameMatch[2]) {
+        cleanEmail = nameMatch[2];
+      }
+      
+      // Clean and lowercase for comparison
+      cleanEmail = cleanEmail.trim().toLowerCase();
+      
+      // Validate email format
+      if (!isValidEmail(cleanEmail)) {
+        AppLogger.warn('Invalid email format skipped', { email: cleanEmail });
+        continue;
+      }
+      
+      // Skip if duplicate (case-insensitive)
+      if (seen.has(cleanEmail)) {
+        continue;
+      }
+      
+      // Skip if it's the current user
+      if (userEmails.has(cleanEmail)) {
+        continue;
+      }
+      
+      seen.add(cleanEmail);
+      // Preserve original case if possible
+      normalized.push(email.includes('@') ? email : cleanEmail);
+    }
+    
+    return normalized;
+  }
+  
+  /**
+   * Validate email format (RFC-ish)
+   */
+  export function isValidEmail(email: string): boolean {
+    if (!email || email.length < 3 || email.length > 254) {
+      return false;
+    }
+    
+    // Basic RFC validation
+    const parts = email.split('@');
+    if (parts.length !== 2) {
+      return false;
+    }
+    
+    const [local, domain] = parts;
+    
+    // Local part validation
+    if (!local || local.length > 64 || local.startsWith('.') || local.endsWith('.')) {
+      return false;
+    }
+    
+    // Domain validation
+    if (!domain || domain.length < 3 || !domain.includes('.')) {
+      return false;
+    }
+    
+    // Final regex check
+    return EMAIL_REGEX.test(email);
   }
   
   /**
