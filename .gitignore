@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage
+coverage/
+*.lcov
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Editor directories and files
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# Clasp credentials
+.clasprc.json
+.clasp.json
+
+# Test results
+test-results.json
+
+# Temporary files
+*.tmp
+*.temp
