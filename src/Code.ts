@@ -26,19 +26,20 @@
 // ===== ENTRY POINTS =====
 
 /**
- * Homepage trigger
+ * Homepage trigger - Returns array of cards as required by Gmail
  */
-function onHomepage(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
+function onHomepage(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card[] {
   return ErrorHandler.wrapWithErrorHandling(() => {
     AppLogger.info('Homepage opened', { version: Config.VERSION });
     
     const missing = State.getMissingRequirements();
     
-    if (missing.length > 0) {
-      return buildSettingsCard(`Setup required: ${missing.join(', ')}`);
-    }
+    const card = missing.length > 0
+      ? buildSettingsCard(`Setup required: ${missing.join(', ')}`)
+      : buildSettingsCard();
     
-    return buildSettingsCard();
+    // Gmail requires array of cards for homepage trigger
+    return [card];
   }, 'onHomepage')();
 }
 
