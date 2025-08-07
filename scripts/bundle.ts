@@ -48,6 +48,7 @@ const CORE_MODULES = [
   'template',
   'email',
   'gmail',
+  'circuit-breaker',
   'gemini',
   'document',
   'drive',

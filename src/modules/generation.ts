@@ -66,6 +66,7 @@ namespace Generation {
   
   /**
    * Build prompt text from template and variables
+   * Returns both the prompt text and whether it was truncated
    */
   export function buildPromptText(
     context: {
@@ -77,7 +78,7 @@ namespace Generation {
       recipients: Types.Recipients;
       threadText: string;
     }
-  ): string {
+  ): { promptText: string; truncated: boolean } {
     const promptTemplate = Document.readPromptTextCached();
     const baseSubject = context.threadMetadata.lastSubject || context.threadMetadata.firstSubject || '';
     const promptVars = Template.buildPromptVariables(
@@ -90,6 +91,22 @@ namespace Generation {
       context.recipients.cc,
       context.threadText
     );
-    return Template.replaceVariables(promptTemplate, promptVars);
+    const fullPrompt = Template.replaceVariables(promptTemplate, promptVars);
+    
+    // Truncate prompt if it exceeds max length
+    if (fullPrompt.length <= Config.EMAIL.PROMPT_MAX_CHARS) {
+      return { promptText: fullPrompt, truncated: false };
+    }
+    
+    // Truncate the prompt to max chars
+    AppLogger.warn('Prompt truncated', { 
+      originalLength: fullPrompt.length, 
+      maxLength: Config.EMAIL.PROMPT_MAX_CHARS 
+    });
+    
+    return { 
+      promptText: fullPrompt.substring(0, Config.EMAIL.PROMPT_MAX_CHARS), 
+      truncated: true 
+    };
   }
 }

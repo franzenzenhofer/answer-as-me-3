@@ -121,6 +121,53 @@ namespace Validation {
   }
   
   /**
+   * Strict Gmail context validation for all entry points
+   * Returns true if context is valid, false otherwise
+   */
+  export function isValidGmailContext(event: unknown): boolean {
+    if (!event || typeof event !== 'object') {
+      return false;
+    }
+    
+    const e = event as Types.GmailAddOnEvent;
+    
+    // Check basic structure
+    if (!e.gmail || typeof e.gmail !== 'object') {
+      return false;
+    }
+    
+    // Check required fields
+    if (!e.gmail.messageId || typeof e.gmail.messageId !== 'string') {
+      return false;
+    }
+    
+    if (!e.gmail.accessToken || typeof e.gmail.accessToken !== 'string') {
+      return false;
+    }
+    
+    // Validate message ID format (basic check)
+    if (e.gmail.messageId.length < 5 || e.gmail.messageId.length > 100) {
+      return false;
+    }
+    
+    // Validate access token format (basic check)
+    if (e.gmail.accessToken.length < 10) {
+      return false;
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Create friendly error response for invalid Gmail context
+   */
+  export function createGmailContextError(): GoogleAppsScript.Card_Service.ActionResponse {
+    return UI.createActionResponse(
+      UI.createNotification('❌ Please open an email thread to use this feature')
+    );
+  }
+  
+  /**
    * Validate form inputs
    */
   export function getFormValue(formInputs: Types.FormInputs | undefined, key: keyof Types.FormInputs): string | undefined {

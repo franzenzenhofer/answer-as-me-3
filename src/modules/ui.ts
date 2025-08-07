@@ -72,23 +72,24 @@ namespace UI {
   }
   
   /**
-   * Create switch widget
+   * Create switch widget (Gmail-compatible using SelectionInput checkbox)
    */
   export function createSwitch(
     fieldName: string,
-    _title: string,
+    title: string,
     selected: boolean
-  ): GoogleAppsScript.Card_Service.Switch {
-    return CardService.newSwitch()
+  ): GoogleAppsScript.Card_Service.SelectionInput {
+    // Gmail-safe fallback: single checkbox since CardService.newSwitch() is not available in Gmail
+    return CardService.newSelectionInput()
       .setFieldName(fieldName)
-      .setControlType(CardService.SwitchControlType.SWITCH)
-      .setValue(selected ? 'true' : 'false')
-      .setOnChangeAction(CardService.newAction().setFunctionName('saveSettings'))
-      .setSelected(selected);
+      .setTitle(title)
+      .setType(CardService.SelectionInputType.CHECK_BOX)
+      .addItem(title, 'true', selected)
+      .setOnChangeAction(CardService.newAction().setFunctionName('saveSettings'));
   }
   
   /**
-   * Create text button
+   * Create text button with loading indicator
    */
   export function createButton(
     text: string,
@@ -97,7 +98,8 @@ namespace UI {
     style?: GoogleAppsScript.Card_Service.TextButtonStyle
   ): GoogleAppsScript.Card_Service.TextButton {
     const action = CardService.newAction()
-      .setFunctionName(actionFunction);
+      .setFunctionName(actionFunction)
+      .setLoadIndicator(CardService.LoadIndicator.SPINNER); // Add spinner to prevent double-clicks
     
     if (parameters) {
       action.setParameters(parameters);

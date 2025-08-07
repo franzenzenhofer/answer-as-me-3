@@ -102,6 +102,29 @@ function onGmailMessage(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Se
 }
 
 /**
+ * Insert last suggestion into compose editor
+ * Used from compose UI to insert cached generated body
+ */
+function insertLastSuggestionInCompose(_event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const body = CacheService.getUserCache().get('AAM3_LAST_BODY') || '';
+    
+    if (!body) {
+      // Return empty response if no cached body
+      return CardService.newUpdateDraftActionResponseBuilder().build();
+    }
+    
+    return CardService.newUpdateDraftActionResponseBuilder()
+      .setUpdateDraftBodyAction(
+        CardService.newUpdateDraftBodyAction()
+          .addUpdateContent(Utils.toHtml(body), CardService.ContentType.MUTABLE_HTML)
+          .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT)
+      )
+      .build();
+  }, 'insertLastSuggestionInCompose')();
+}
+
+/**
  * Compose trigger
  */
 function onComposeAction(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
@@ -115,7 +138,8 @@ function onComposeAction(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_
         UI.createDropdown('mode', 'Mode', Config.EMAIL.MODES, settings.defaultMode),
         UI.createDropdown('tone', 'Tone', Config.EMAIL.TONES, settings.defaultTone),
         UI.createTextInput('intent', 'What would you like to say?', ''),
-        UI.createButton('Generate Draft', 'generateForCompose', {}, CardService.TextButtonStyle.FILLED)
+        UI.createButton('Generate Draft', 'generateForCompose', {}, CardService.TextButtonStyle.FILLED),
+        UI.createButton('Insert Last Suggestion', 'insertLastSuggestionInCompose', {}, CardService.TextButtonStyle.TEXT)
       )
     );
   }, 'onComposeAction')();
@@ -242,10 +266,19 @@ function buildDetailCard(_event?: Types.GmailAddOnEvent, banner?: string): Googl
   }
   
   // Generation controls
+  // Generate & Insert button using ComposeAction for proper inline reply
+  const generateInsertButton = CardService.newTextButton()
+    .setText('Generate & Insert')
+    .setComposeAction(
+      CardService.newAction().setFunctionName('generateAndOpenReply'),
+      CardService.ComposedEmailType.REPLY_AS_DRAFT
+    );
+  
   sections.push(UI.createSection(
     UI.createDropdown('mode', 'Mode', Config.EMAIL.MODES, settings.defaultMode),
     UI.createDropdown('tone', 'Tone', Config.EMAIL.TONES, settings.defaultTone),
-    UI.createButton('Generate Reply', 'generateReply', {}, CardService.TextButtonStyle.FILLED)
+    UI.createButton('Generate Reply (Preview)', 'generateReply'),
+    generateInsertButton
   ));
   
   // Fast actions
@@ -457,6 +490,10 @@ function factoryReset(_event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Serv
  * Generate reply action
  */
 function generateReply(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  // Strict Gmail context guard
+  if (!Validation.isValidGmailContext(event)) {
+    return Validation.createGmailContextError();
+  }
   return doGenerate(event, undefined, undefined);
 }
 
@@ -464,8 +501,63 @@ function generateReply(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Serv
  * Generate with intent
  */
 function generateWithIntent(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  // Strict Gmail context guard
+  if (!Validation.isValidGmailContext(event)) {
+    return Validation.createGmailContextError();
+  }
   const intent = event.parameters?.intent || '';
   return doGenerate(event, undefined, intent);
+}
+
+/**
+ * Generate and open reply in compose window (proper inline reply)
+ * Uses ComposeActionResponse to open reply editor in thread
+ */
+function generateAndOpenReply(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ComposeActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    // Validate requirements
+    Validation.ensureAllRequirements();
+    const validEvent = Validation.validateGmailEvent(event);
+    
+    // Extract context
+    const context = Generation.extractContext(validEvent);
+    
+    // Build prompt
+    const { promptText, truncated: promptTruncated } = Generation.buildPromptText({
+      ...context,
+      intent: ''
+    });
+    
+    // Call Gemini
+    const apiKey = Validation.ensureApiKey();
+    const geminiResult = Gemini.generateEmailReply(apiKey, promptText);
+    
+    // Log the generation
+    const fullTruncated = context.truncated || promptTruncated;
+    logGeneration({ ...context, truncated: fullTruncated }, '', geminiResult);
+    
+    if (!geminiResult.success || !geminiResult.response) {
+      // Compose actions must return a ComposeActionResponse
+      // Return empty one so Gmail stays put while showing error
+      return CardService.newComposeActionResponseBuilder().build();
+    }
+    
+    // Cache the generated body for compose UI insert
+    CacheService.getUserCache().put('AAM3_LAST_BODY', geminiResult.response.body, 600); // 10 min TTL
+    
+    // Create a GmailDraft reply and hand it to Gmail
+    GmailUtils.setAccessToken(validEvent.gmail!.accessToken!);
+    const message = GmailUtils.getMessageById(validEvent.gmail!.messageId!, validEvent.gmail!.accessToken!);
+    const html = Utils.toHtml(geminiResult.response.body);
+    
+    const draft = (context.mode === 'ReplyAll')
+      ? message.getThread().createDraftReplyAll('', { htmlBody: html })
+      : message.createDraftReply('', { htmlBody: html });
+    
+    return CardService.newComposeActionResponseBuilder()
+      .setGmailDraft(draft)
+      .build();
+  }, 'generateAndOpenReply')();
 }
 
 /**
@@ -490,7 +582,7 @@ function doGenerate(
     }
     
     // Build prompt
-    const promptText = Generation.buildPromptText({
+    const { promptText, truncated: promptTruncated } = Generation.buildPromptText({
       ...context,
       intent: intent || ''
     });
@@ -499,8 +591,9 @@ function doGenerate(
     const apiKey = Validation.ensureApiKey();
     const geminiResult = Gemini.generateEmailReply(apiKey, promptText);
     
-    // Log the generation
-    logGeneration(context, intent || '', geminiResult);
+    // Log the generation (merge truncation flags)
+    const fullTruncated = context.truncated || promptTruncated;
+    logGeneration({ ...context, truncated: fullTruncated }, intent || '', geminiResult);
     
     if (!geminiResult.success || !geminiResult.response) {
       return ErrorHandler.createErrorResponse(geminiResult.error || 'Failed to generate reply');

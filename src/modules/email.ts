@@ -42,7 +42,9 @@ const EMPTY_RECIPIENTS: Types.Recipients = { to: [], cc: [] };
     const normalized: string[] = [];
     
     for (const email of emails) {
-      if (!email) continue;
+      if (!email) {
+        continue;
+      }
       
       // Extract email from "Name <email>" format
       let cleanEmail = email;

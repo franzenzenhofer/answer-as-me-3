@@ -31,10 +31,13 @@ namespace GmailUtils {
    * Build update draft action response
    */
   export function buildDraftResponse(body: string): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
+    const bodyAction = CardService.newUpdateDraftBodyAction()
+      .addUpdateContent(Utils.toHtml(body), CardService.ContentType.MUTABLE_HTML)
+      // Use IN_PLACE_INSERT for now - REPLACE may not be in type definitions yet
+      .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT);
+    
     return CardService.newUpdateDraftActionResponseBuilder()
-      .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
-        .addUpdateContent(Utils.toHtml(body), CardService.ContentType.MUTABLE_HTML)
-        .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
+      .setUpdateDraftBodyAction(bodyAction)
       .build();
   }
   
@@ -46,15 +49,24 @@ namespace GmailUtils {
     to: string[],
     cc: string[]
   ): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
-    return CardService.newUpdateDraftActionResponseBuilder()
+    // Normalize and validate recipients before using them
+    const normalizedTo = Email.normalizeRecipients(to, true);
+    const normalizedCc = Email.normalizeRecipients(cc, true);
+    
+    const builder = CardService.newUpdateDraftActionResponseBuilder()
       .setUpdateDraftToRecipientsAction(CardService.newUpdateDraftToRecipientsAction()
-        .addUpdateToRecipients(to))
-      .setUpdateDraftCcRecipientsAction(CardService.newUpdateDraftCcRecipientsAction()
-        .addUpdateCcRecipients(cc))
+        .addUpdateToRecipients(normalizedTo))
       .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
         .addUpdateContent(Utils.toHtml(body), CardService.ContentType.MUTABLE_HTML)
-        .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
-      .build();
+        .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT));
+    
+    // Only add CC recipients if there are any
+    if (normalizedCc && normalizedCc.length > 0) {
+      builder.setUpdateDraftCcRecipientsAction(CardService.newUpdateDraftCcRecipientsAction()
+        .addUpdateCcRecipients(normalizedCc));
+    }
+    
+    return builder.build();
   }
   
   /**
@@ -64,13 +76,14 @@ namespace GmailUtils {
     body: string,
     subject: string
   ): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
-    return CardService.newUpdateDraftActionResponseBuilder()
+    const builder = CardService.newUpdateDraftActionResponseBuilder()
       .setUpdateDraftSubjectAction(CardService.newUpdateDraftSubjectAction()
         .addUpdateSubject(subject))
       .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
         .addUpdateContent(Utils.toHtml(body), CardService.ContentType.MUTABLE_HTML)
-        .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
-      .build();
+        .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT));
+    
+    return builder.build();
   }
   
   /**
@@ -82,17 +95,26 @@ namespace GmailUtils {
     to: string[],
     cc: string[]
   ): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
-    return CardService.newUpdateDraftActionResponseBuilder()
+    // Normalize and validate recipients before using them
+    const normalizedTo = Email.normalizeRecipients(to, true);
+    const normalizedCc = Email.normalizeRecipients(cc, true);
+    
+    const builder = CardService.newUpdateDraftActionResponseBuilder()
       .setUpdateDraftToRecipientsAction(CardService.newUpdateDraftToRecipientsAction()
-        .addUpdateToRecipients(to))
-      .setUpdateDraftCcRecipientsAction(CardService.newUpdateDraftCcRecipientsAction()
-        .addUpdateCcRecipients(cc))
+        .addUpdateToRecipients(normalizedTo))
       .setUpdateDraftSubjectAction(CardService.newUpdateDraftSubjectAction()
         .addUpdateSubject(subject))
       .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
         .addUpdateContent(Utils.toHtml(body), CardService.ContentType.MUTABLE_HTML)
-        .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
-      .build();
+        .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT));
+    
+    // Only add CC recipients if there are any
+    if (normalizedCc && normalizedCc.length > 0) {
+      builder.setUpdateDraftCcRecipientsAction(CardService.newUpdateDraftCcRecipientsAction()
+        .addUpdateCcRecipients(normalizedCc));
+    }
+    
+    return builder.build();
   }
   
   /**

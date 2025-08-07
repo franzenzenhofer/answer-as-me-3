@@ -25,8 +25,11 @@ namespace State {
       batch[Config.PROPS.DEFAULT_TONE] = settings.defaultTone;
     }
     
-    // ONE CALL instead of THREE
-    props.setProperties(batch);
+    // Guard against empty property batches
+    if (Object.keys(batch).length > 0) {
+      // ONE CALL instead of THREE
+      props.setProperties(batch);
+    }
   }
   
   /**

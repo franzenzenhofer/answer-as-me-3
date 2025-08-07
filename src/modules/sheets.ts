@@ -6,7 +6,7 @@ namespace SheetsUtils {
   let todaySheetCache: GoogleAppsScript.Spreadsheet.Spreadsheet | null = null;
   
   /**
-   * Get or create today's log sheet
+   * Get or create today's log sheet with concurrency protection
    */
   export function getTodaySheet(): GoogleAppsScript.Spreadsheet.Spreadsheet {
     // Return cached sheet if available
@@ -28,15 +28,26 @@ namespace SheetsUtils {
       }
     }
     
-    // Look for existing sheet or create new one
-    const sheetName = Config.LOGS.SHEET_PREFIX + today;
-    const folder = DriveUtils.getLogsFolder();
-    const existingFile = DriveUtils.getFileByNameInFolder(folder, sheetName);
+    // Acquire lock to prevent duplicate sheet creation
+    const lock = LockService.getDocumentLock();
+    try {
+      // Try to acquire lock for 5 seconds
+      lock.waitLock(5000);
+    } catch (e) {
+      AppLogger.warn('Could not acquire lock for sheet creation', { error: e });
+      // Continue anyway - better to risk duplicate than to fail
+    }
     
-    let spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
-    
-    if (existingFile) {
-      spreadsheet = SpreadsheetApp.open(existingFile);
+    try {
+      // Re-check for existing sheet after acquiring lock
+      const sheetName = Config.LOGS.SHEET_PREFIX + today;
+      const folder = DriveUtils.getLogsFolder();
+      const existingFile = DriveUtils.getFileByNameInFolder(folder, sheetName);
+      
+      let spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
+      
+      if (existingFile) {
+        spreadsheet = SpreadsheetApp.open(existingFile);
     } else {
       // Create new sheet
       spreadsheet = SpreadsheetApp.create(sheetName);
@@ -63,6 +74,14 @@ namespace SheetsUtils {
     todaySheetCache = spreadsheet;
     
     return spreadsheet;
+    } finally {
+      // Always release the lock
+      try {
+        lock.releaseLock();
+      } catch (e) {
+        // Ignore lock release errors
+      }
+    }
   }
   
   /**

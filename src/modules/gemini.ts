@@ -226,13 +226,33 @@ namespace Gemini {
     apiResult: Types.GeminiCallResult;
     safetyInfo?: Types.SafetyRating[];
   } {
-    // Remove circuit breaker for now - GAS doesn't support async well
-    // return CSUtils.geminiCircuitBreaker.execute(() => {
+    // Check circuit breaker before making API call
+    if (!CircuitBreaker.canExecute()) {
+      return {
+        success: false,
+        error: CircuitBreaker.createCircuitOpenError(),
+        apiResult: {
+          code: 503,
+          text: '',
+          duration: 0,
+          respBytes: 0,
+          promptChars: promptText.length,
+          requestPayload: {}
+        }
+      };
+    }
+    
     const apiResult = callGenerateContent(apiKey, promptText);
     
     // Check HTTP status
     if (apiResult.code !== 200) {
       const error = getErrorFromResponse(apiResult.text);
+      
+      // Record failure in circuit breaker for server errors and rate limits
+      if (apiResult.code === 429 || apiResult.code >= 500) {
+        CircuitBreaker.recordFailure(`HTTP ${apiResult.code}: ${error}`);
+      }
+      
       return {
         success: false,
         error: `HTTP ${apiResult.code}${error ? `: ${error}` : ''}`,
@@ -263,6 +283,9 @@ namespace Gemini {
       };
     }
     
+    // Record success in circuit breaker
+    CircuitBreaker.recordSuccess();
+    
     const result = {
       success: true,
       response,
@@ -271,6 +294,5 @@ namespace Gemini {
     };
     
     return result;
-    // }); // End circuit breaker execute
   }
 }

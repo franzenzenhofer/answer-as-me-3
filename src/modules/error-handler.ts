@@ -85,7 +85,8 @@ namespace ErrorHandler {
       case ErrorType.GMAIL_ERROR:
         return 'Gmail error. Please ensure you have an email thread open.';
       default:
-        return 'An error occurred. Please try again later.';
+        // Show actual error message for UNKNOWN errors to help debugging
+        return `Unexpected error: ${error.message || 'unknown'}`;
     }
   }
   

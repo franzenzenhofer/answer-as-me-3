@@ -23,7 +23,7 @@ const MODULES_DIR = path.join(SRC_DIR, 'modules');
 const MODULES = [
   'config', 'types', 'contracts', 'algorithms', 'utils', 
   'email', 'validation', 'drive', 'sheets', 'logger',
-  'cs-utils', 'template', 'gmail', 'gemini', 'document',
+  'circuit-breaker', 'cs-utils', 'template', 'gmail', 'gemini', 'document',
   'state', 'ui', 'error-handler', 'generation'
 ];
 

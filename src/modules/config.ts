@@ -35,7 +35,8 @@ namespace Config {
   // Email Configuration
   export const EMAIL = {
     THREAD_MAX_CHARS: 120000,
-    PREVIEW_CHARS: 1200,
+    PREVIEW_CHARS: 4000, // Increased from 1200 for better UX
+    PROMPT_MAX_CHARS: 140000, // Max chars for prompt to Gemini API
     MODES: ['Reply', 'ReplyAll', 'Forward'] as const,
     TONES: ['Professional', 'Friendly', 'Casual', 'Formal', 'Humorous'] as const,
     INTENTS: ['Decline', 'AskFollowUps', 'Confirm', 'Schedule', 'Thanks'] as const
