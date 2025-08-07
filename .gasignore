@@ -1,0 +1,18 @@
+# GAS deployment ignore file
+node_modules/
+.git/
+.github/
+tests/
+scripts/
+templates/
+docs/
+coverage/
+*.md
+*.log
+.env*
+.eslintrc*
+.prettierrc*
+jest.config*
+tsconfig.json
+package*.json
+deployment-report.json

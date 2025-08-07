@@ -1,0 +1,36 @@
+{
+  "namespace": {
+    "reserved": [
+      "Drive",
+      "Gmail",
+      "Calendar",
+      "Sheets",
+      "Docs",
+      "Forms",
+      "Slides",
+      "Maps",
+      "Charts"
+    ],
+    "alternatives": {
+      "Drive": "DriveUtils",
+      "Gmail": "GmailUtils",
+      "Calendar": "CalendarUtils",
+      "Sheets": "SheetsUtils",
+      "Docs": "DocsUtils",
+      "Forms": "FormsUtils",
+      "Slides": "SlidesUtils"
+    }
+  },
+  "deployment": {
+    "maxBundleSize": 1048576,
+    "warnBundleSize": 512000,
+    "requiredManifestFields": [
+      "timeZone",
+      "exceptionLogging"
+    ]
+  },
+  "typeOverrides": {
+    "GmailDraftActionResponse": "UpdateDraftActionResponse",
+    "Calendar.EventRecurrence": "CalendarApp.EventRecurrence"
+  }
+}

@@ -1,0 +1,266 @@
+#!/usr/bin/env tsx
+
+/**
+ * Setup script to implement all GAS-specific fixes
+ * Run this to configure your project with all root cause fixes
+ */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { execSync } from 'child_process';
+import chalk from 'chalk';
+
+class GasProjectSetup {
+  private projectRoot: string;
+
+  constructor() {
+    this.projectRoot = process.cwd();
+  }
+
+  async setup(): Promise<void> {
+    console.log(chalk.blue('🔧 Setting up GAS-specific fixes...\n'));
+
+    // 1. Update package.json scripts
+    this.updatePackageScripts();
+
+    // 2. Create GAS-specific configs
+    this.createGasConfigs();
+
+    // 3. Update existing configs
+    this.updateExistingConfigs();
+
+    // 4. Install dependencies
+    this.installDependencies();
+
+    // 5. Run initial validation
+    this.runValidation();
+
+    console.log(chalk.green('\n✅ GAS fixes setup complete!'));
+    this.printNextSteps();
+  }
+
+  private updatePackageScripts(): void {
+    console.log(chalk.blue('📦 Updating package.json scripts...'));
+
+    const packagePath = path.join(this.projectRoot, 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+
+    // Add new scripts
+    pkg.scripts = {
+      ...pkg.scripts,
+      // Validation scripts
+      'validate:namespaces': 'tsx scripts/namespace-validator.ts',
+      'validate:namespaces:fix': 'tsx scripts/namespace-validator.ts --fix',
+      'validate:types': 'tsx scripts/gas-type-checker.ts',
+      'validate:types:fix': 'tsx scripts/gas-type-checker.ts --fix',
+      'validate:all': 'npm-run-all validate:namespaces validate:types',
+      
+      // Build scripts
+      'build:enhanced': 'tsx scripts/enhanced-bundler.ts',
+      'build:verbose': 'tsx scripts/enhanced-bundler.ts --verbose',
+      
+      // Deployment scripts
+      'deploy:gas': 'tsx scripts/gas-deploy.ts',
+      'deploy:gas:force': 'tsx scripts/gas-deploy.ts --force',
+      'deploy:gas:dry': 'tsx scripts/gas-deploy.ts --dry-run',
+      
+      // Setup scripts
+      'setup:gas': 'tsx scripts/setup-gas-fixes.ts',
+      'generate:types': 'tsx scripts/gas-type-checker.ts --generate-overrides'
+    };
+
+    fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2));
+    console.log(chalk.green('  ✓ Package scripts updated'));
+  }
+
+  private createGasConfigs(): void {
+    console.log(chalk.blue('\n📄 Creating GAS-specific configs...'));
+
+    // Create .gasignore for clasp
+    const gasignore = `# GAS deployment ignore file
+node_modules/
+.git/
+.github/
+tests/
+scripts/
+templates/
+docs/
+coverage/
+*.md
+*.log
+.env*
+.eslintrc*
+.prettierrc*
+jest.config*
+tsconfig.json
+package*.json
+deployment-report.json
+`;
+
+    fs.writeFileSync(path.join(this.projectRoot, '.gasignore'), gasignore);
+    console.log(chalk.green('  ✓ Created .gasignore'));
+
+    // Create gas.config.json
+    const gasConfig = {
+      namespace: {
+        reserved: [
+          'Drive', 'Gmail', 'Calendar', 'Sheets', 'Docs',
+          'Forms', 'Slides', 'Maps', 'Charts'
+        ],
+        alternatives: {
+          'Drive': 'DriveUtils',
+          'Gmail': 'GmailUtils',
+          'Calendar': 'CalendarUtils',
+          'Sheets': 'SheetsUtils',
+          'Docs': 'DocsUtils',
+          'Forms': 'FormsUtils',
+          'Slides': 'SlidesUtils'
+        }
+      },
+      deployment: {
+        maxBundleSize: 1048576, // 1MB
+        warnBundleSize: 512000, // 500KB
+        requiredManifestFields: ['timeZone', 'exceptionLogging']
+      },
+      typeOverrides: {
+        'GmailDraftActionResponse': 'UpdateDraftActionResponse',
+        'Calendar.EventRecurrence': 'CalendarApp.EventRecurrence'
+      }
+    };
+
+    fs.writeFileSync(
+      path.join(this.projectRoot, 'gas.config.json'),
+      JSON.stringify(gasConfig, null, 2)
+    );
+    console.log(chalk.green('  ✓ Created gas.config.json'));
+  }
+
+  private updateExistingConfigs(): void {
+    console.log(chalk.blue('\n🔄 Updating existing configs...'));
+
+    // Update tsconfig.json
+    const tsconfigPath = path.join(this.projectRoot, 'tsconfig.json');
+    if (fs.existsSync(tsconfigPath)) {
+      const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf8'));
+      
+      // Ensure GAS-compatible settings
+      tsconfig.compilerOptions = {
+        ...tsconfig.compilerOptions,
+        module: 'None',
+        target: 'ES2022',
+        lib: ['ES2022'],
+        types: ['google-apps-script'],
+        isolatedModules: false
+      };
+
+      fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2));
+      console.log(chalk.green('  ✓ Updated tsconfig.json'));
+    }
+
+    // Create types directory
+    const typesDir = path.join(this.projectRoot, 'src', 'types');
+    if (!fs.existsSync(typesDir)) {
+      fs.mkdirSync(typesDir, { recursive: true });
+    }
+
+    // Create gas-overrides.d.ts
+    const overrides = `/**
+ * Type overrides for Google Apps Script
+ * Auto-generated by gas-type-checker
+ */
+
+declare namespace GoogleAppsScript {
+  namespace Card_Service {
+    // Fix for Gmail draft response type
+    interface UpdateDraftActionResponse {
+      printJson(): string;
+    }
+  }
+}
+
+// Global type aliases for common mistakes
+type GmailDraftActionResponse = GoogleAppsScript.Card_Service.UpdateDraftActionResponse;
+
+// Ensure GAS globals are available
+declare const Logger: GoogleAppsScript.Base.Logger;
+declare const console: GoogleAppsScript.Base.console;
+`;
+
+    fs.writeFileSync(path.join(typesDir, 'gas-overrides.d.ts'), overrides);
+    console.log(chalk.green('  ✓ Created type overrides'));
+  }
+
+  private installDependencies(): void {
+    console.log(chalk.blue('\n📦 Installing dependencies...'));
+
+    const devDeps = [
+      '@types/google-apps-script',
+      'typescript',
+      '@typescript-eslint/parser',
+      '@typescript-eslint/eslint-plugin',
+      'eslint',
+      'acorn',
+      'commander',
+      'chalk',
+      'tsx'
+    ];
+
+    try {
+      execSync(`npm install --save-dev ${devDeps.join(' ')}`, {
+        stdio: 'inherit'
+      });
+      console.log(chalk.green('  ✓ Dependencies installed'));
+    } catch (error) {
+      console.warn(chalk.yellow('  ⚠️  Some dependencies may have failed to install'));
+    }
+  }
+
+  private runValidation(): void {
+    console.log(chalk.blue('\n🔍 Running initial validation...'));
+
+    try {
+      // Check namespaces
+      execSync('tsx scripts/namespace-validator.ts', { stdio: 'pipe' });
+      console.log(chalk.green('  ✓ Namespace validation passed'));
+    } catch (error) {
+      console.warn(chalk.yellow('  ⚠️  Namespace conflicts detected (run npm run validate:namespaces:fix)'));
+    }
+
+    try {
+      // Check types
+      execSync('tsx scripts/gas-type-checker.ts', { stdio: 'pipe' });
+      console.log(chalk.green('  ✓ Type validation passed'));
+    } catch (error) {
+      console.warn(chalk.yellow('  ⚠️  Type mismatches detected (run npm run validate:types:fix)'));
+    }
+  }
+
+  private printNextSteps(): void {
+    console.log(chalk.blue('\n📋 Next steps:'));
+    console.log(chalk.gray('  1. Run validation and fix any issues:'));
+    console.log(chalk.white('     npm run validate:all'));
+    console.log(chalk.white('     npm run validate:namespaces:fix'));
+    console.log(chalk.white('     npm run validate:types:fix'));
+    
+    console.log(chalk.gray('\n  2. Build with enhanced bundler:'));
+    console.log(chalk.white('     npm run build:enhanced'));
+    
+    console.log(chalk.gray('\n  3. Deploy with GAS-aware pipeline:'));
+    console.log(chalk.white('     npm run deploy:gas'));
+    
+    console.log(chalk.gray('\n  4. For CI/CD integration:'));
+    console.log(chalk.white('     npm run deploy:gas:dry  # Test deployment'));
+    console.log(chalk.white('     npm run deploy:gas:force  # Force deployment'));
+  }
+}
+
+// Run setup
+if (require.main === module) {
+  const setup = new GasProjectSetup();
+  setup.setup().catch(error => {
+    console.error(chalk.red('Setup failed:'), error);
+    process.exit(1);
+  });
+}
+
+export { GasProjectSetup };

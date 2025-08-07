@@ -34,6 +34,9 @@
       }
     }
   },
+  "urlFetchWhitelist": [
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+  ],
   "oauthScopes": [
     "https://www.googleapis.com/auth/gmail.addons.execute",
     "https://www.googleapis.com/auth/gmail.addons.current.message.readonly",

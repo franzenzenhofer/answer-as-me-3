@@ -106,6 +106,39 @@ function validatePrerequisites(): void {
   log('✅ Prerequisites validated', 'success');
 }
 
+function runValidation(options: DeployOptions): void {
+  if (options.skipTests) {
+    log('⏭️  Skipping validation (--skip-tests)', 'warn');
+    return;
+  }
+  
+  log('📋 Running validation checks...', 'info');
+  
+  // Namespace validation
+  try {
+    execCommand('npx tsx scripts/namespace-validator.ts', { silent: !options.verbose });
+    log('  ✓ Namespace validation passed', 'success');
+  } catch (error) {
+    log('  ✗ Namespace conflicts detected', 'error');
+    if (!options.verbose) {
+      log('    Run with --verbose for details', 'info');
+    }
+    throw new Error('Fix namespace conflicts with: npm run validate:namespaces:fix');
+  }
+  
+  // Type validation
+  try {
+    execCommand('npx tsx scripts/gas-type-checker.ts', { silent: !options.verbose });
+    log('  ✓ Type compatibility passed', 'success');
+  } catch (error) {
+    log('  ✗ Type mismatches detected', 'error');
+    if (!options.verbose) {
+      log('    Run with --verbose for details', 'info');
+    }
+    throw new Error('Fix type issues with: npm run validate:types:fix');
+  }
+}
+
 function runBuild(options: DeployOptions): void {
   if (options.dryRun) {
     log('[DRY-RUN] Would run: npm run build', 'info');
@@ -141,7 +174,7 @@ function validateBundle(): DeploymentInfo {
   }
   
   // Check for required functions
-  const requiredFunctions = ['onHomepage', 'generateGreeting'];
+  const requiredFunctions = ['onHomepage', 'onGmailMessage', 'generateReply', 'testAddon'];
   const missingFunctions = requiredFunctions.filter(fn => !content.includes(`function ${fn}(`));
   
   if (missingFunctions.length > 0) {
@@ -386,10 +419,13 @@ async function deploy(options: DeployOptions): Promise<void> {
     // Step 1: Validate prerequisites
     validatePrerequisites();
     
-    // Step 2: Run build
+    // Step 2: Run validation checks
+    runValidation(options);
+    
+    // Step 3: Run build
     runBuild(options);
     
-    // Step 3: Validate bundle
+    // Step 4: Validate bundle
     const deploymentInfo = validateBundle();
     
     // Step 4: Add deployment header

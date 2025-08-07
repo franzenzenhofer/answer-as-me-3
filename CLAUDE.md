@@ -63,7 +63,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 4. Verify no TypeScript errors or warnings
 
 #### Deployment Process
-- Always use `npm run deploy` for production
+- **CRITICAL**: Always use `npm run deploy` for production deployments!
 - Never use `npm run push` directly
 - Test in Gmail after deployment
 - Document any issues found

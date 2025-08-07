@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    // Google Apps Script specific settings
+    "target": "ES2022",
+    "module": "None", // GAS doesn't support modules
+    "lib": ["ES2022"],
+    "types": ["google-apps-script"],
+    
+    // Namespace configuration for GAS
+    "moduleResolution": "node",
+    "esModuleInterop": false,
+    "allowSyntheticDefaultImports": false,
+    
+    // Strict type checking
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    
+    // Additional checks
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    
+    // GAS compatibility
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowJs": false,
+    
+    // Output configuration
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "removeComments": false, // Keep comments for debugging in GAS
+    "sourceMap": true,
+    "declaration": false, // Not needed for GAS
+    "declarationMap": false,
+    
+    // GAS-specific: Preserve namespace structure
+    "preserveConstEnums": true,
+    "isolatedModules": false // Important: GAS needs access to all code
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  // GAS-specific compiler options documentation
+  "_gasNotes": {
+    "namespaceConflicts": [
+      "Avoid these namespace names that conflict with GAS globals:",
+      "- Drive (use DriveUtils or DriveService)",
+      "- Gmail (use GmailUtils or GmailService)", 
+      "- Calendar (use CalendarUtils or CalendarService)",
+      "- Sheets (use SheetsUtils or SpreadsheetService)",
+      "- Docs (use DocsUtils or DocumentService)",
+      "- Forms (use FormsUtils or FormService)",
+      "- Slides (use SlidesUtils or SlidesService)"
+    ],
+    "tripleSlashReferences": [
+      "Required for namespace dependencies in GAS:",
+      "/// <reference path=\"modules/config.ts\" />"
+    ],
+    "moduleSystem": "GAS requires namespace pattern, not ES6 modules"
+  }
+}

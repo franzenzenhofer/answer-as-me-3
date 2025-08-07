@@ -373,12 +373,24 @@ async function createBundle(options: BundleOptions = { treeShake: true, analyze:
     const jsPath = path.join(modulesDir, `${moduleName}.js`);
     const moduleContent = fs.readFileSync(jsPath, 'utf8');
     
-    // Skip types module if it's empty (only contains type definitions)
-    if (moduleName === 'types' && moduleContent.trim().includes('//# sourceMappingURL=types.js.map')) {
+    // Check if module is empty or type-only
+    const isEmptyModule = moduleContent.trim() === '' || 
+                         moduleContent.trim() === '"use strict";' ||
+                         moduleContent.trim().match(/^["']use strict["'];\s*\/\/# sourceMappingURL=.*$/);
+    
+    const isTypeOnlyModule = moduleName === 'types' && 
+                            (isEmptyModule || moduleContent.trim().includes('//# sourceMappingURL=types.js.map'));
+    
+    if (isTypeOnlyModule) {
       // Create an empty Types namespace for type checking
-      modulesContent += `\n// ===== TYPES MODULE =====\n`;
-      modulesContent += `var Types;\n(function (Types) {\n})(Types || (Types = {}));\n`;
-      log(`✅ Included module: types (Types) - empty namespace for type definitions`, 'success');
+      modulesContent += `\n// ===== TYPES MODULE (Type-only) =====\n`;
+      modulesContent += `var Types;\n(function (Types) {\n  // Type-only module - no runtime code\n})(Types || (Types = {}));\n`;
+      log(`✅ Included module: types (Types) - type definitions only`, 'success');
+      continue;
+    }
+    
+    if (isEmptyModule) {
+      log(`⏭️  Skipping empty module: ${moduleName}`, 'warn');
       continue;
     }
     
