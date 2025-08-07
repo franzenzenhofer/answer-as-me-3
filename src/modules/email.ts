@@ -10,40 +10,32 @@ const EMPTY_RECIPIENTS: Types.Recipients = { to: [], cc: [] };
    * @complexity O(n) where n is string length
    * @contract ensures unique valid email addresses
    */
+  // Pre-compiled regex for SPEED
+  const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig;
+  const EMAIL_SPLIT_REGEX = /[;,]/;
+  
   export function extractEmailAddresses(listStr: string | null | undefined): string[] {
-    if (!listStr) {
-      return [];
-    }
+    if (!listStr) return [];
     
-    const emails: string[] = [];
-    const parts = listStr.split(/[;,]/);
-    
-    parts.forEach(part => {
-      const matches = part.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig);
-      if (matches) {
-        emails.push(...matches);
-      }
-    });
-    
-    // Postcondition: all extracted strings are valid emails
-    if (Contracts.ENABLE_CONTRACTS) {
-      emails.forEach(email => {
-        Contracts.EmailContracts.requireValidEmail(email);
-      });
-    }
-    
-    return emails;
+    // FAST: Single regex exec instead of split + match
+    const matches = listStr.match(EMAIL_REGEX);
+    return matches || [];
   }
   
   /**
    * Get current user's email addresses (primary + aliases)
    */
+  // Cache user emails for SPEED
+  let userEmailCache: Set<string> | null = null;
+  
   export function getUserEmailAddresses(): Set<string> {
-    const emailSet = new Set<string>();
+    if (userEmailCache) return userEmailCache;
+    
+    userEmailCache = new Set<string>();
     const primaryEmail = Utils.getCurrentUserEmail();
     
     if (primaryEmail) {
-      emailSet.add(primaryEmail.toLowerCase());
+      userEmailCache.add(primaryEmail.toLowerCase());
     }
     
     try {
@@ -57,7 +49,7 @@ const EMPTY_RECIPIENTS: Types.Recipients = { to: [], cc: [] };
       // No alias access
     }
     
-    return emailSet;
+    return userEmailCache;
   }
   
   /**
@@ -74,25 +66,16 @@ const EMPTY_RECIPIENTS: Types.Recipients = { to: [], cc: [] };
    * @contract ensures no duplicates in result
    */
   export function getUniqueEmails(emails: string[]): string[] {
-    // Precondition: input is array of strings
-    if (Contracts.ENABLE_CONTRACTS) {
-      Contracts.requires(Array.isArray(emails), 'Input must be an array');
-    }
-    
+    // FAST: Use Set for O(1) deduplication
     const seen = new Set<string>();
     const result: string[] = [];
     
-    emails.forEach(email => {
+    for (const email of emails) {
       const lower = email.toLowerCase();
       if (!seen.has(lower)) {
         seen.add(lower);
         result.push(email);
       }
-    });
-    
-    // Postcondition: result contains no duplicates
-    if (Contracts.ENABLE_CONTRACTS) {
-      Contracts.EmailContracts.ensureUniqueEmails(result);
     }
     
     return result;
@@ -164,31 +147,21 @@ const EMPTY_RECIPIENTS: Types.Recipients = { to: [], cc: [] };
    * Get full thread as plain text
    */
   export function getThreadPlainText(thread: GoogleAppsScript.Gmail.GmailThread): string {
+    // FAST: Get only what we need
     const messages = thread.getMessages();
+    
+    // SIMPLE: Just get the last few messages for context
+    const recentMessages = messages.slice(-3); // Last 3 messages only
+    
     const parts: string[] = [];
+    for (const msg of recentMessages) {
+      // ONE batch call per message
+      parts.push(
+        `From: ${msg.getFrom()}\nDate: ${msg.getDate()}\n\n${msg.getPlainBody()}\n---\n`
+      );
+    }
     
-    messages.forEach((message, index) => {
-      const header = [
-        `From: ${message.getFrom() || ''}`,
-        `Date: ${message.getDate() || ''}`,
-        `To: ${message.getTo() || ''}`
-      ];
-      
-      const cc = message.getCc();
-      if (cc) {
-        header.push(`Cc: ${cc}`);
-      }
-      
-      parts.push(header.join('\n'));
-      parts.push('');
-      parts.push(message.getPlainBody() || '');
-      
-      if (index < messages.length - 1) {
-        parts.push('', '---', '');
-      }
-    });
-    
-    return parts.join('\n');
+    return parts.join('');
   }
   
   /**

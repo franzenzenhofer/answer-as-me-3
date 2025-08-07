@@ -102,7 +102,7 @@ namespace Gemini {
       );
     }
     
-    const parsed = Utils.jsonParse<any>(responseText);
+    const parsed = Utils.jsonParse<Types.GeminiResponse>(responseText);
     
     if (!parsed || !parsed.candidates || !parsed.candidates[0]) {
       return '';
@@ -137,7 +137,7 @@ namespace Gemini {
    * Get safety ratings from response
    */
   export function getSafetyRatings(responseText: string): Types.SafetyRating[] | null {
-    const parsed = Utils.jsonParse<any>(responseText);
+    const parsed = Utils.jsonParse<Types.GeminiResponse>(responseText);
     if (!parsed) {
       return null;
     }
@@ -159,7 +159,7 @@ namespace Gemini {
    * Get error from response
    */
   export function getErrorFromResponse(responseText: string): string {
-    const parsed = Utils.jsonParse<any>(responseText);
+    const parsed = Utils.jsonParse<Types.GeminiResponse>(responseText);
     
     if (parsed && parsed.error) {
       if (parsed.error.message) {

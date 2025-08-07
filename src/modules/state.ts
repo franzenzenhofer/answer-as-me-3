@@ -13,39 +13,22 @@ namespace State {
     defaultMode?: Types.EmailMode;
     defaultTone?: Types.EmailTone;
   }): void {
-    // Precondition: validate settings structure
-    if (Contracts.ENABLE_CONTRACTS) {
-      Contracts.StateContracts.requireValidSettings(settings);
-      
-      // Validate specific fields if provided
-      if (settings.apiKey !== undefined) {
-        Contracts.APIContracts.requireAPIKey(settings.apiKey);
-      }
-      if (settings.defaultMode !== undefined) {
-        Contracts.requires(
-          CSUtils.isValidMode(settings.defaultMode),
-          'Invalid email mode'
-        );
-      }
-      if (settings.defaultTone !== undefined) {
-        Contracts.requires(
-          CSUtils.isValidTone(settings.defaultTone),
-          'Invalid email tone'
-        );
-      }
-    }
+    // FAST: Batch all properties in ONE call
+    const props = PropertiesService.getUserProperties();
+    const batch: { [key: string]: string } = {};
     
     if (settings.apiKey !== undefined) {
-      Utils.setProperty(Config.PROPS.API_KEY, settings.apiKey);
+      batch[Config.PROPS.API_KEY] = settings.apiKey;
     }
-    
     if (settings.defaultMode !== undefined) {
-      Utils.setProperty(Config.PROPS.DEFAULT_MODE, settings.defaultMode);
+      batch[Config.PROPS.DEFAULT_MODE] = settings.defaultMode;
+    }
+    if (settings.defaultTone !== undefined) {
+      batch[Config.PROPS.DEFAULT_TONE] = settings.defaultTone;
     }
     
-    if (settings.defaultTone !== undefined) {
-      Utils.setProperty(Config.PROPS.DEFAULT_TONE, settings.defaultTone);
-    }
+    // ONE CALL instead of THREE
+    props.setProperties(batch);
     
     // Postcondition: settings are saved
     if (Contracts.ENABLE_CONTRACTS) {

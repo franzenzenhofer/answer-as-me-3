@@ -3,14 +3,23 @@
  * CardService component builders for Gmail add-on
  */
 namespace UI {
+  // Cache common UI elements for SPEED
+  let cachedImageStyle: GoogleAppsScript.Card_Service.ImageStyle | null = null;
+  let cachedButtonStyle: GoogleAppsScript.Card_Service.TextButtonStyle | null = null;
+  let cachedDropdowns = new Map<string, GoogleAppsScript.Card_Service.SelectionInput>();
   /**
    * Create card header with icon
    */
   export function createHeader(title: string, subtitle?: string): GoogleAppsScript.Card_Service.CardHeader {
+    // FAST: Cache image style
+    if (!cachedImageStyle) {
+      cachedImageStyle = CardService.ImageStyle.CIRCLE;
+    }
+    
     const header = CardService.newCardHeader()
       .setTitle(title)
       .setImageUrl(Config.ICON_URL)
-      .setImageStyle(CardService.ImageStyle.CIRCLE);
+      .setImageStyle(cachedImageStyle);
     
     if (subtitle) {
       header.setSubtitle(subtitle);
