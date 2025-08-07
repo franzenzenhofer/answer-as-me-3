@@ -63,7 +63,9 @@ namespace DriveUtils {
    */
   export function logsFolderExists(): boolean {
     const folderId = Utils.getProperty(Config.PROPS.LOGS_FOLDER_ID);
-    if (!folderId) return false;
+    if (!folderId) {
+return false;
+}
     
     try {
       DriveApp.getFolderById(folderId);

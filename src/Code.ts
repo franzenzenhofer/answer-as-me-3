@@ -259,9 +259,15 @@ function saveSettings(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Servi
     const defaultTone = Validation.getFormValue(formInputs, 'defaultTone');
     
     const settings: Parameters<typeof State.saveSettings>[0] = {};
-    if (apiKey !== undefined) settings.apiKey = apiKey;
-    if (defaultMode !== undefined) settings.defaultMode = defaultMode as Types.EmailMode;
-    if (defaultTone !== undefined) settings.defaultTone = defaultTone as Types.EmailTone;
+    if (apiKey !== undefined) {
+      settings.apiKey = apiKey;
+    }
+    if (defaultMode !== undefined) {
+      settings.defaultMode = defaultMode as Types.EmailMode;
+    }
+    if (defaultTone !== undefined) {
+      settings.defaultTone = defaultTone as Types.EmailTone;
+    }
     
     State.saveSettings(settings);
     

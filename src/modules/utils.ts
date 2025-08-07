@@ -90,7 +90,9 @@ namespace Utils {
    * Cap string length
    */
   export function capString(str: string | null | undefined, maxLength: number): string {
-    if (!str) return '';
+    if (!str) {
+return '';
+}
     return str.length > maxLength ? str.substring(0, maxLength) : str;
   }
   

@@ -6,7 +6,9 @@ namespace Email {
    * Extract email addresses from a string
    */
   export function extractEmailAddresses(listStr: string | null | undefined): string[] {
-    if (!listStr) return [];
+    if (!listStr) {
+return [];
+}
     
     const emails: string[] = [];
     const parts = listStr.split(/[;,]/);

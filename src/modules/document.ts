@@ -49,7 +49,9 @@ namespace Document {
    */
   export function promptDocExists(): boolean {
     const docId = Utils.getProperty(Config.PROPS.PROMPT_DOC_ID);
-    if (!docId) return false;
+    if (!docId) {
+return false;
+}
     
     try {
       DocumentApp.openById(docId);

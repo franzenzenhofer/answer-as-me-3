@@ -29,11 +29,12 @@
       "error",
       {
         "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_|^(Config|AppLogger|State|ErrorHandler|UI)$"
+        "varsIgnorePattern": "^_|^(Config|Types|Utils|Validation|Template|Email|GmailUtils|Gemini|Document|DriveUtils|SheetsUtils|AppLogger|State|ErrorHandler|UI|onHomepage|onSettings|onGmailMessage|onComposeAction|buildSettingsCard|buildDetailCard|buildPreviewCard|saveSettings|testApiKey|openOrCreatePromptDoc|openOrCreateLogsFolder|openTodayLog|factoryReset|generateReply|generateWithIntent|doGenerate|composeReplyInThread|composeReplyAllInThread|composeForwardInThread|useInComposeStandalone|testAddon)$"
       }
     ],
     "@typescript-eslint/no-non-null-assertion": "warn",
     "@typescript-eslint/no-namespace": "off",
+    "@typescript-eslint/triple-slash-reference": "off",
     "no-console": "off",
     "prefer-const": "error",
     "no-var": "error",
