@@ -29,7 +29,7 @@
       "error",
       {
         "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_"
+        "varsIgnorePattern": "^_|^(Config|AppLogger|State|ErrorHandler|UI)$"
       }
     ],
     "@typescript-eslint/no-non-null-assertion": "warn",
@@ -39,7 +39,8 @@
     "no-var": "error",
     "eqeqeq": ["error", "always"],
     "curly": ["error", "all"],
-    "brace-style": ["error", "1tbs"]
+    "brace-style": ["error", "1tbs"],
+    "no-inner-declarations": "off"
   },
   "ignorePatterns": [
     "dist/**/*",
