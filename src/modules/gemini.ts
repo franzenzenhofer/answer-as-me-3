@@ -108,7 +108,14 @@ namespace Gemini {
       return null;
     }
     
-    return Utils.jsonParse<Types.GeminiResponse>(jsonText);
+    // Clean up potential code fence blocks that Gemini might add
+    const cleaned = jsonText.trim()
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/```$/i, '')
+      .trim();
+    
+    return Utils.jsonParse<Types.GeminiResponse>(cleaned);
   }
   
   /**

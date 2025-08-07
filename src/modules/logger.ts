@@ -22,22 +22,40 @@ namespace AppLogger {
   /**
    * Log info message
    */
-  export function info(_message: string, _data?: unknown): void {
-    // Info logging disabled in production
+  export function info(message: string, data?: unknown): void {
+    if (Utils.getProperty(Config.PROPS.LOGGING_ENABLED, 'true') === 'true') {
+      try {
+        Logger.log(`[INFO] ${message}${data ? ' :: ' + Utils.jsonStringify(data) : ''}`);
+      } catch (_) {
+        // Ignore logging errors
+      }
+    }
   }
   
   /**
    * Log warning message
    */
-  export function warn(_message: string, _data?: unknown): void {
-    // Warning logging disabled in production
+  export function warn(message: string, data?: unknown): void {
+    if (Utils.getProperty(Config.PROPS.LOGGING_ENABLED, 'true') === 'true') {
+      try {
+        Logger.log(`[WARN] ${message}${data ? ' :: ' + Utils.jsonStringify(data) : ''}`);
+      } catch (_) {
+        // Ignore logging errors
+      }
+    }
   }
   
   /**
    * Log error message
    */
-  export function error(_message: string, _error?: unknown): void {
-    // Error logging disabled in production
+  export function error(message: string, error?: unknown): void {
+    if (Utils.getProperty(Config.PROPS.LOGGING_ENABLED, 'true') === 'true') {
+      try {
+        Logger.log(`[ERROR] ${message} :: ${Utils.jsonStringify(error)}`);
+      } catch (_) {
+        // Ignore logging errors
+      }
+    }
   }
   
   /**

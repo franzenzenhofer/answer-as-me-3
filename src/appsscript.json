@@ -13,7 +13,7 @@
       },
       "universalActions": [{
         "label": "Settings", 
-        "runFunction": "onSettings" 
+        "runFunction": "onSettingsUniversal" 
       }]
     },
     "gmail": {
@@ -35,7 +35,7 @@
     }
   },
   "urlFetchWhitelist": [
-    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "https://generativelanguage.googleapis.com/"
   ],
   "oauthScopes": [
     "https://www.googleapis.com/auth/gmail.addons.execute",

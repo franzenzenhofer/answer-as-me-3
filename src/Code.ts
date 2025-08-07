@@ -44,11 +44,37 @@ function onHomepage(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Servi
 }
 
 /**
- * Settings universal action
+ * Settings universal action - Returns UniversalActionResponse for manifest
+ */
+function onSettingsUniversal(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.UniversalActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    AppLogger.info('Settings opened via universal action');
+    const card = buildSettingsCard();
+    return CardService.newUniversalActionResponseBuilder()
+      .displayAddOnCards([card])
+      .build();
+  }, 'onSettingsUniversal')();
+}
+
+/**
+ * Settings action for in-card buttons - Returns ActionResponse
+ */
+function openSettingsAction(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    AppLogger.info('Settings opened via card button');
+    return UI.createActionResponse(
+      UI.createNotification('Opening Settings…'),
+      UI.createUpdateNavigation(buildSettingsCard())
+    );
+  }, 'openSettingsAction')();
+}
+
+/**
+ * Legacy settings function - kept for backward compatibility
  */
 function onSettings(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
   return ErrorHandler.wrapWithErrorHandling(() => {
-    AppLogger.info('Settings opened');
+    AppLogger.info('Settings opened (legacy)');
     return buildSettingsCard();
   }, 'onSettings')();
 }
@@ -93,6 +119,17 @@ function onComposeAction(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_
       )
     );
   }, 'onComposeAction')();
+}
+
+/**
+ * Back to thread action - Returns ActionResponse for navigation
+ */
+function backToThread(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    AppLogger.info('Navigating back to thread');
+    const nav = CardService.newNavigation().popCard();
+    return UI.createActionResponse(UI.createNotification(''), nav);
+  }, 'backToThread')();
 }
 
 // ===== CARD BUILDERS =====
@@ -223,7 +260,7 @@ function buildDetailCard(_event?: Types.GmailAddOnEvent, banner?: string): Googl
   
   // Settings link
   sections.push(UI.createSection(
-    UI.createButton('Settings', 'onSettings')
+    UI.createButton('Settings', 'openSettingsAction')
   ));
   
   return UI.createCard(
@@ -283,8 +320,8 @@ function buildPreviewCard(preview: Types.PreviewData): GoogleAppsScript.Card_Ser
         to: preview.to.join(','),
         cc: preview.cc.join(',')
       }),
-      UI.createButton('Back', 'onGmailMessage'),
-      UI.createButton('Settings', 'onSettings')
+      UI.createButton('Back', 'backToThread'),
+      UI.createButton('Settings', 'openSettingsAction')
     ])
   ));
   
