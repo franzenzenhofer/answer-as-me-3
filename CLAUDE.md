@@ -4,7 +4,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Answer As Me 3** is a production-ready modular Google Apps Script Gmail add-on built with TypeScript. It demonstrates best practices in architecture, deployment, and testing for GAS add-ons.
+**Answer As Me 3** is a production-ready modular Google Apps Script Gmail add-on built with TypeScript. It's an AI-powered email assistant that generates contextual replies using Google's Gemini API.
+
+## Core Principles
+
+### MODULAR Architecture
+- **One file per function**: Each module has a single responsibility
+- **No monolithic files**: Split functionality across focused modules
+- **Clear module boundaries**: Each module exports a namespace with related functions
+
+### SOLID Principles
+- **Single Responsibility**: Each module handles one aspect (e.g., email parsing, API calls)
+- **Open/Closed**: Modules are open for extension but closed for modification
+- **Liskov Substitution**: Interfaces and types ensure proper substitution
+- **Interface Segregation**: Small, focused interfaces over large ones
+- **Dependency Inversion**: Depend on abstractions (types) not concretions
+
+### DRY (Don't Repeat Yourself)
+- Shared logic extracted to utility modules
+- Configuration centralized in Config namespace
+- Reusable UI components in UI module
+
+### KISS (Keep It Simple, Stupid)
+- Simple, readable code over clever solutions
+- Clear naming conventions
+- Minimal nesting and complexity
+
+### Bug-Free Development
+- **100% Type Safety**: No `any` types without explicit reason
+- **Comprehensive Testing**: Every module has corresponding tests
+- **No Test Left Behind**: All functionality must be tested
+- **Root Cause Analysis**: Fix the cause, not symptoms
+- **Fail Fast**: Validate early and throw clear errors
 
 ## Architecture
 
@@ -17,12 +48,47 @@ The project uses TypeScript namespaces (not ES modules) to maintain compatibilit
 ### Module Structure
 ```
 src/modules/
-├── config.ts      # Config namespace - configuration constants
-├── logger.ts      # AppLogger namespace - structured logging
-├── state.ts       # State namespace - PropertiesService persistence
-├── ui.ts          # UI namespace - CardService component builders
-└── error-handler.ts # ErrorHandler namespace - error handling
+├── config.ts        # Config namespace - all configuration constants
+├── types.ts         # Types namespace - TypeScript type definitions
+├── utils.ts         # Utils namespace - utility functions
+├── validation.ts    # Validation namespace - input validation
+├── template.ts      # Template namespace - template variable replacement
+├── email.ts         # Email namespace - email parsing and recipient logic
+├── gmail.ts         # Gmail namespace - Gmail API interactions
+├── gemini.ts        # Gemini namespace - Gemini API integration
+├── document.ts      # Document namespace - Google Docs operations
+├── drive.ts         # Drive namespace - Google Drive operations
+├── sheets.ts        # Sheets namespace - Google Sheets logging
+├── logger.ts        # AppLogger namespace - structured logging with Sheet integration
+├── state.ts         # State namespace - PropertiesService persistence
+├── ui.ts            # UI namespace - CardService UI components
+└── error-handler.ts # ErrorHandler namespace - comprehensive error handling
 ```
+
+### Module Responsibilities
+
+#### Core Modules
+- **config.ts**: All configuration constants, API endpoints, property keys
+- **types.ts**: TypeScript interfaces and type definitions
+- **utils.ts**: Date formatting, JSON parsing, string utilities
+- **validation.ts**: Input validation, schema validation
+- **template.ts**: Template variable replacement
+
+#### Email Modules
+- **email.ts**: Email address extraction, recipient computation, subject formatting
+- **gmail.ts**: Gmail API wrapper, thread/message operations
+- **gemini.ts**: Gemini API calls, response parsing, retry logic
+
+#### Storage Modules
+- **document.ts**: Prompt document creation and reading
+- **drive.ts**: Logs folder management, file creation
+- **sheets.ts**: Daily log sheet creation and writing
+
+#### UI & State Modules
+- **ui.ts**: Card builders, form inputs, notifications
+- **state.ts**: User properties, settings persistence
+- **logger.ts**: Structured logging to sheets
+- **error-handler.ts**: Error wrapping, user-friendly messages
 
 ### Build Pipeline
 1. TypeScript compilation: `src/**/*.ts` → `dist/src/**/*.js`
