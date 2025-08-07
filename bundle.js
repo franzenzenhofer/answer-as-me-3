@@ -254,19 +254,8 @@ function createBundle() {
     .replace(/__VERSION__/g, appVersion)
     .replace(/__DEPLOY_TIME__/g, deployTime);
   
-  // Add header
-  const header = `/**
- * Answer As Me 3 - Modular Hello World Add-on
- * Modular architecture bundled into single file
- * Generated: ${new Date().toISOString()}
- * Version: ${fullVersion}
- */
-
-"use strict";
-
-`;
-  
-  const bundledContent = header + finalContent;
+  // Don't add header here - deploy.sh will add it
+  const bundledContent = finalContent;
   
   // Validate bundle content before writing
   if (bundledContent.length < 5000) {

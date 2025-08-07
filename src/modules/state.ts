@@ -47,7 +47,7 @@ namespace State {
   
   export function setLastGreeting(greeting: string): void {
     currentState.lastGreeting = greeting;
-    currentState.lastError = undefined; // Clear error on success
+    delete currentState.lastError; // Clear error on success
     saveToProperties();
   }
   

@@ -13,12 +13,12 @@ namespace ErrorHandler {
   export interface AppError {
     type: ErrorType;
     message: string;
-    details?: any;
+    details?: unknown;
     timestamp: Date;
     stack?: string;
   }
   
-  export function handleError(error: any, context: string): AppError {
+  export function handleError(error: unknown, context: string): AppError {
     const appError: AppError = {
       type: ErrorType.UNKNOWN,
       message: 'An unexpected error occurred',
@@ -27,7 +27,9 @@ namespace ErrorHandler {
     
     if (error instanceof Error) {
       appError.message = error.message;
-      appError.stack = error.stack;
+      if (error.stack) {
+        appError.stack = error.stack;
+      }
       
       // Classify error type
       if (error.message.includes('Invalid') || error.message.includes('required')) {
@@ -66,7 +68,7 @@ namespace ErrorHandler {
     }
   }
   
-  export function wrapAsync<T extends (...args: any[]) => any>(
+  export function wrapAsync<T extends (...args: unknown[]) => unknown>(
     fn: T,
     context: string
   ): T {
