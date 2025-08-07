@@ -1,243 +1,169 @@
 # CLAUDE.md
 
-> I am **Claude Code** (not Claude Desktop).  
-> On every session start: **read & understand** this CLAUDE.md + `/Users/franzenzenhofer/.claude/CLAUDE.md` + `/Users/franzenzenhofer/CLAUDE.md`.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
----
+## Project Overview
 
-## 🎯 Project Goal
+**Answer As Me 3** is a production-ready modular Google Apps Script Gmail add-on built with TypeScript. It demonstrates best practices in architecture, deployment, and testing for GAS add-ons.
 
-**THE MAIN GOAL**: Create a production-ready modular Google Apps Script Gmail add-on with TypeScript, demonstrating best practices in architecture, deployment, and testing.
+## Architecture
 
-### Project Identity
-- **Name**: Answer As Me 3
-- **Type**: Gmail Add-on (Google Apps Script)
-- **Architecture**: Modular TypeScript with namespace pattern
-- **Deployment**: Single-file bundle (Code.gs)
+### Modular TypeScript with Namespace Pattern
+The project uses TypeScript namespaces (not ES modules) to maintain compatibility with Google Apps Script:
+- Each module is compiled to a namespace (e.g., `Config`, `AppLogger`, `State`, `UI`, `ErrorHandler`)
+- Dependencies are resolved at build time using topological sorting
+- Single-file bundle output (`Code.gs`) required by GAS
 
----
-
-## 1️⃣ Root-Cause Problem Solving
-
-* Ask **"Why?" × 7** → every answer becomes a **todo**
-* Fix the **root cause**, not symptoms
-* No mock/fallback/dummy data - **real implementations only**
-* **Fail fast, loud, early** → investigate → permanent **KISS/DRY/CLEAN** fix
-* Read every file before you change it. Understand every file before you write to it.
-
-## 2️⃣ Task & Todo Management
-
-### Before ANY action:
-1. **Think** – goal, constraints, KISS/DRY, success criteria
-2. **Todo** – create/update todo list with priorities
-3. **Do** – implement with maintainable, debuggable code
-4. **Test** – unit + integration + post-bundle validation
-5. **Reflect** – refine, dedupe, simplify
-
-### Task Requirements:
-* One-day max scope, action-verb names
-* Each task MUST have:
-  - **QA task**: Verify implementation correctness
-  - **Priority task**: Consider alternatives and sustainability
-* Tag with **priority** (high/medium/low) and **effort**
-
-## 3️⃣ Code Quality Standards
-
-### Zero Tolerance:
-* **0** failing tests, lints, TS errors, warnings
-* **0** code smells or technical debt
-* **100%** type safety (no `any` without explicit reason)
-
-### Architecture Principles:
-* **Modular**: Single responsibility per module
-* **DRY**: > 10% duplication fails build
-* **KISS**: ≤ 50 LOC per function
-* **Pure functions** preferred
-* **Immutable state** updates
-
-### Module Structure:
+### Module Structure
 ```
-src/
-├── modules/         # TypeScript namespace modules
-│   ├── config.ts    # Configuration constants
-│   ├── logger.ts    # Structured logging (AppLogger)
-│   ├── state.ts     # State management
-│   ├── ui.ts        # CardService UI builders
-│   └── error-handler.ts # Error handling
-└── Code.ts          # Main entry point
+src/modules/
+├── config.ts      # Config namespace - configuration constants
+├── logger.ts      # AppLogger namespace - structured logging
+├── state.ts       # State namespace - PropertiesService persistence
+├── ui.ts          # UI namespace - CardService component builders
+└── error-handler.ts # ErrorHandler namespace - error handling
 ```
 
-## 4️⃣ Development Workflow
+### Build Pipeline
+1. TypeScript compilation: `src/**/*.ts` → `dist/src/**/*.js`
+2. Module bundling: Combines modules in dependency order → `dist/Code.gs`
+3. Version injection: Replaces `__VERSION__` and `__DEPLOY_TIME__` placeholders
+4. Deployment: Pushes single bundle to Google Apps Script
 
-### Commands:
-| Command | Action | Description |
-|---------|--------|-------------|
-| `npm run build` | Compile + Bundle | TypeScript → JS → Single Code.gs |
-| `npm run watch` | Dev mode | Watch TypeScript files |
-| `npm test` | Run tests | Jest with GAS mocks |
-| `npm run lint` | Type check | `tsc --noEmit` |
-| `npm run check` | Full validation | Lint + ESLint |
-| `npm run deploy` | Production deploy | Full pipeline + version bump |
-| `npm run deploy:major` | Major release | Major version bump |
+## Essential Commands
 
-### Build Pipeline:
-1. **Clean**: Remove old dist files
-2. **Compile**: TypeScript → JavaScript
-3. **Bundle**: Combine modules with dependency resolution
-4. **Validate**: Post-bundle syntax and content checks
-5. **Version**: Inject version and timestamp
-
-## 5️⃣ Deployment Protocol
-
-### **CRITICAL**: Always run `npm run deploy` after changes!
-
-The deployment process:
-1. **Pre-deploy checks**: Lint, test, build
-2. **Bundle creation**: Single Code.gs file
-3. **Version management**: Auto version bump
-4. **Push to GAS**: With auto-cleanup
-5. **Verification**: Post-deploy validation
-
-### Deployment Features:
-* **Dry-run mode**: `./deploy.sh --dry-run`
-* **Auto-cleanup**: Removes old deployments at limit
-* **Single-file guarantee**: Only Code.gs + appsscript.json
-* **Version injection**: `__VERSION__` and `__DEPLOY_TIME__` replaced
-
-## 6️⃣ Testing Strategy
-
-### Test Types:
-* **Unit tests**: Module isolation (limited due to namespaces)
-* **Post-bundle**: Validates final Code.gs structure
-* **Integration**: Manual testing in Gmail
-
-### Post-Bundle Validation:
-* Bundle size check (min 5KB)
-* Required functions present
-* Required namespaces present
-* Syntax validation with Acorn
-* No CommonJS artifacts
-
-## 7️⃣ Git & Version Control
-
-### Every session:
+### Development
 ```bash
-git add -A
-git commit -m "type: description"  # Conventional commits
-git push
+npm run build         # Full build: compile + bundle + validate
+npm run watch         # Watch TypeScript files for changes
+npm test              # Run Jest tests with GAS mocks
+npm run lint          # TypeScript type checking (tsc --noEmit)
+npm run check         # Full validation: lint + ESLint
 ```
 
-### Commit Types:
-* `feat:` New features
-* `fix:` Bug fixes
-* `chore:` Maintenance
-* `docs:` Documentation
-* `test:` Test changes
-* `refactor:` Code restructuring
+### Deployment
+```bash
+npm run deploy        # Full deployment pipeline (minor version bump)
+npm run deploy:major  # Major version deployment
+npm run deploy:dry-run # Test deployment without pushing
+```
 
-## 8️⃣ Security & Safety
+### Testing
+```bash
+npm test              # Unit tests
+npm run test:postbundle # Validate bundle structure
+npm run test:comprehensive # All tests + code analysis
+```
 
-### File Protection:
-* Files can ONLY be deleted with explicit `"DELETE"` command
-* No destructive operations without confirmation
-* Protect Franz Enzenhofer's data at all times
+### Clasp Operations
+```bash
+npm run login         # Authenticate with Google
+npm run push          # Push to Apps Script (build first)
+npm run open          # Open in Apps Script editor
+npm run logs          # View Apps Script logs
+```
 
-### Code Security:
-* No hardcoded credentials
-* Use PropertiesService for sensitive data
-* Input validation on all user inputs
-* Error messages don't expose internals
+## Key Implementation Details
 
-## 9️⃣ Module Guidelines
+### Bundle Creation (`scripts/bundle.ts`)
+- Analyzes module dependencies using AST parsing
+- Performs topological sort for correct module order
+- Extracts namespace content from compiled JavaScript
+- Validates bundle syntax and required functions
+- Supports tree shaking (currently disabled for .gs files)
 
-### Config Module:
-* All constants and configuration
-* Version placeholders for build-time injection
-* Type-safe settings objects
+### Deployment Process (`scripts/deploy.ts`)
+1. Pre-deployment checks (lint, test, build)
+2. Bundle validation (size, syntax, required functions)
+3. Deployment header injection with version/timestamp
+4. Clasp configuration in dist directory
+5. Auto-cleanup of old deployments (keeps 40 most recent)
+6. Push to Google Apps Script with version tracking
+7. Post-deployment validation
+8. GitHub push with tags
 
-### Logger Module (AppLogger):
-* Structured logging with levels
-* ISO timestamp format
-* Optional data parameter
-* Named `AppLogger` to avoid conflicts
+### State Management
+- Uses PropertiesService for persistence
+- Centralized state access through State namespace
+- Immutable update pattern
 
-### State Module:
-* Centralized state management
-* PropertiesService persistence
-* Getter/setter pattern
-* Immutable updates
+### Error Handling
+- Typed error categories
+- User-friendly error messages
+- Comprehensive logging
+- Async wrapper functions (`ErrorHandler.wrapAsync`)
 
-### UI Module:
-* Reusable CardService builders
-* Consistent styling
-* Type-safe component creation
-* Error and loading states
+### UI Components
+- Built with CardService API
+- Reusable component builders in UI namespace
+- Consistent styling and error states
 
-### ErrorHandler Module:
-* Typed error categories
-* User-friendly messages
-* Comprehensive logging
-* Async wrapper functions
+## Critical Configuration
 
-## 🔟 Production Checklist
+### Script ID
+Located in `scripts/deploy.ts`:
+```typescript
+const SCRIPT_ID = '197HGcHZYyIkxSmoedQu9gixNURSmMi6_lqCsfsY3kYi4THzRCEl4nwi1';
+```
 
-Before deployment:
-- [ ] All tests passing
-- [ ] No lint errors or warnings
-- [ ] Post-bundle validation successful
-- [ ] Version bumped appropriately
-- [ ] README.md updated if needed
-- [ ] No console.log in production code
-- [ ] Error handling comprehensive
-- [ ] State persistence working
+### TypeScript Configuration
+- Target: ES2022
+- Module: CommonJS (for GAS compatibility)
+- Strict mode enabled with all checks
+- Namespace resolution for modules
 
-## 📚 Key Files
+### Version Management
+- Version from package.json (e.g., "1.2.0")
+- App version uses major.minor only (e.g., "1.2")
+- Deploy time in Vienna timezone
 
-* **bundle.js**: Module bundling with dependency resolution
-* **deploy.sh**: Robust deployment script
-* **tests/scripts/test-post-bundle.js**: Bundle validation
-* **sync-readme.js**: Keeps README in sync with config
+## Common Issues & Solutions
 
-## 🚨 Common Issues & Solutions
+### TypeScript Namespace Conflicts
+- Solution: Rename namespaces (e.g., `Logger` → `AppLogger`)
 
-### TypeScript Namespace Conflicts:
-* Solution: Rename conflicting namespaces (e.g., Logger → AppLogger)
+### Bundle Too Small Error
+- Indicates missing content in bundle
+- Check module compilation and extraction
 
-### ESLint Parsing Errors:
-* Add test files to `.eslintignore`
-* Use separate tsconfig for tests
+### Missing Functions in Bundle
+- Verify all entry points are exported
+- Check namespace extraction in bundle.ts
 
-### Bundle Too Large:
-* Check for duplicate code
-* Ensure clean build before bundling
-* Remove development artifacts
+### Deployment Limit (50 deployments)
+- Auto-cleanup runs during deployment
+- Keeps 40 most recent deployments
 
-### Deployment Failures:
-* Check clasp authentication
-* Verify .clasp.json has correct scriptId
-* Use --dry-run to test first
+## Testing Strategy
 
----
+### Unit Tests
+- Limited due to namespace architecture
+- Mock Google Apps Script globals
+- Focus on pure functions
 
-## 📋 Current Status
+### Post-Bundle Validation
+- Validates bundle size (min 5KB)
+- Checks required functions present
+- Verifies namespace structure
+- Syntax validation with Acorn parser
 
-- ✅ Modular TypeScript architecture
-- ✅ Complete build pipeline
-- ✅ Testing infrastructure
-- ✅ Deployment automation
-- ✅ Error handling and logging
-- ✅ State management
-- ✅ UI component system
-- ⏳ Awaiting clasp setup for deployment
+### Integration Testing
+- Manual testing in Gmail required
+- Test add-on appears in sidebar
+- Verify all UI interactions work
 
----
+## Development Workflow
 
-### Mantra
+1. Make changes to TypeScript modules
+2. Run `npm run build` to compile and bundle
+3. Run `npm test` to verify tests pass
+4. Run `npm run deploy` for production deployment
+5. Test in Gmail by opening an email and clicking the add-on
 
-**Quality is culture, not a gate.**
+## Important Notes
 
-Every line of code should be production-ready, maintainable, and a joy to work with.
-
----
-
-*Last Updated: 2025-08-07*
+- Always use `npm run deploy` for production deployments (not just `npm run push`)
+- The bundle process removes CommonJS artifacts and reference tags
+- Version placeholders are replaced at build time
+- Deployment header is added by deploy.ts (not bundle.ts)
+- All modules must be listed in CORE_MODULES array in bundle.ts

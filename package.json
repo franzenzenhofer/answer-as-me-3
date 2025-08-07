@@ -33,7 +33,7 @@
     "test:all": "npm-run-all --parallel test test:postbundle",
     "analyze": "tsx scripts/analyze-code.ts",
     "analyze:strict": "npm run analyze && npm run test:comprehensive",
-    "predeploy": "npm-run-all check build test && echo 'Pre-deploy checks passed'",
+    "predeploy": "npm-run-all check:strict build test:comprehensive analyze:strict && echo 'Pre-deploy checks passed'",
     "deploy": "npm run predeploy && git add -A && git diff --staged --quiet || git commit -m 'chore: prepare for deployment' && npm version minor && tsx scripts/deploy.ts && echo 'Deployment complete'",
     "deploy:dry-run": "tsx scripts/deploy.ts --dry-run",
     "deploy:major": "npm run predeploy && npm version major && ./deploy.sh && echo 'Major version deployment complete'",

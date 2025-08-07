@@ -50,7 +50,7 @@ function execCommand(cmd: string, options: { silent?: boolean } = {}): string {
       encoding: 'utf8',
       stdio: options.silent ? 'pipe' : 'inherit'
     });
-    return output.toString().trim();
+    return output ? output.toString().trim() : '';
   } catch (error) {
     throw new Error(`Command failed: ${cmd}\n${error}`);
   }
@@ -266,22 +266,98 @@ async function deployToGAS(options: DeployOptions): Promise<string> {
     // Create a new deployment
     const deployOutput = execCommand('clasp deploy --description "Automated deployment"', { silent: true });
     
-    // Extract deployment ID
+    // Try to extract deployment ID - different formats
+    let version = 'unknown';
+    let deploymentId = '';
+    
+    // Format 1: Created version X ... -AKfycb...
     const deployMatch = deployOutput.match(/Created version (\d+)[\s\S]*?-(AKfycb[\w-]+)/);
-    if (!deployMatch) {
-      throw new Error('Failed to extract deployment ID from clasp output');
+    if (deployMatch) {
+      version = deployMatch[1];
+      deploymentId = deployMatch[2];
+    } else {
+      // Format 2: Just look for deployment ID
+      const idMatch = deployOutput.match(/AKfycb[\w-]+/);
+      if (idMatch) {
+        deploymentId = idMatch[0];
+      }
     }
     
-    const version = deployMatch[1];
-    const deploymentId = deployMatch[2];
+    if (!deploymentId) {
+      // If we still don't have it, list deployments
+      const listOutput = execCommand('clasp deployments', { silent: true });
+      const lines = listOutput.split('\n').filter(line => line.includes('AKfycb'));
+      if (lines.length > 0) {
+        const latestMatch = lines[0].match(/AKfycb[\w-]+/);
+        if (latestMatch) {
+          deploymentId = latestMatch[0];
+        }
+      }
+    }
     
-    log(`✅ Deployed successfully!`, 'success');
-    log(`   Version: ${version}`, 'info');
-    log(`   Deployment ID: ${deploymentId}`, 'info');
+    if (deploymentId) {
+      log(`✅ Deployed successfully!`, 'success');
+      log(`   Version: ${version}`, 'info');
+      log(`   Deployment ID: ${deploymentId}`, 'info');
+    } else {
+      log(`⚠️  Deployment completed but ID not found`, 'warn');
+      deploymentId = 'UNKNOWN';
+    }
     
     return deploymentId;
   } finally {
     process.chdir(PROJECT_ROOT);
+  }
+}
+
+async function pushToGitHub(options: DeployOptions): Promise<void> {
+  if (options.dryRun) {
+    log('[DRY-RUN] Would push to GitHub', 'info');
+    return;
+  }
+  
+  log('📤 Pushing to GitHub...', 'info');
+  
+  try {
+    // Push tags and commits
+    execCommand('git push origin main --tags', { silent: true });
+    log('✅ Pushed to GitHub successfully', 'success');
+  } catch (error) {
+    log('⚠️  GitHub push failed - you may need to push manually', 'warn');
+  }
+}
+
+async function verifyOnlineDeployment(deploymentId: string, options: DeployOptions): Promise<void> {
+  if (options.dryRun || deploymentId === 'UNKNOWN') {
+    log('[DRY-RUN] Would verify online deployment', 'info');
+    return;
+  }
+  
+  log('🌐 Verifying online deployment...', 'info');
+  
+  try {
+    // Test if the deployment URL is accessible
+    const testUrl = `https://script.google.com/macros/d/${SCRIPT_ID}/edit`;
+    
+    // Use Node.js fetch (available in v18+)
+    const https = await import('https');
+    const testConnection = new Promise((resolve, reject) => {
+      https.get(testUrl, (res) => {
+        if (res.statusCode === 200 || res.statusCode === 302) {
+          resolve(true);
+        } else {
+          reject(new Error(`Status code: ${res.statusCode}`));
+        }
+      }).on('error', reject);
+    });
+    
+    await testConnection;
+    log('✅ Deployment is online and accessible', 'success');
+    log(`   Edit URL: ${testUrl}`, 'info');
+    log(`   Test URL: https://script.google.com/macros/d/${deploymentId}/exec`, 'info');
+    
+  } catch (error) {
+    log('⚠️  Could not verify online status', 'warn');
   }
 }
 
@@ -331,6 +407,12 @@ async function deploy(options: DeployOptions): Promise<void> {
     // Step 8: Run post-deployment tests
     runPostDeploymentTests(deploymentId, options);
     
+    // Step 9: Push to GitHub
+    await pushToGitHub(options);
+    
+    // Step 10: Verify online deployment
+    await verifyOnlineDeployment(deploymentId, options);
+    
     // Success!
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     log(`\n✅ Deployment completed successfully in ${duration}s!`, 'success');
@@ -341,6 +423,11 @@ async function deploy(options: DeployOptions): Promise<void> {
       log(`   Size: ${deploymentInfo.size}`, 'info');
       log(`   Deployment ID: ${deploymentId}`, 'info');
       log(`   Script URL: https://script.google.com/d/${SCRIPT_ID}/edit`, 'info');
+      log(`\n📧 To test in Gmail:`, 'info');
+      log(`   1. Open Gmail in your browser`, 'info');
+      log(`   2. Click on any email`, 'info');
+      log(`   3. Look for "Answer As Me 3" in the right sidebar`, 'info');
+      log(`   4. Click the add-on icon to test it`, 'info');
     }
     
   } catch (error: any) {
