@@ -63,7 +63,7 @@ namespace Algorithms {
         const index = hash % this.size;
         const byteIndex = Math.floor(index / 8);
         const bitIndex = index % 8;
-        this.bits[byteIndex] |= (1 << bitIndex);
+        this.bits[byteIndex]! |= (1 << bitIndex);
       }
       this.count++;
     }
@@ -79,7 +79,7 @@ namespace Algorithms {
         const index = hash % this.size;
         const byteIndex = Math.floor(index / 8);
         const bitIndex = index % 8;
-        if ((this.bits[byteIndex] & (1 << bitIndex)) === 0) {
+        if ((this.bits[byteIndex]! & (1 << bitIndex)) === 0) {
           return false;
         }
       }
