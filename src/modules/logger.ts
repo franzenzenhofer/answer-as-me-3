@@ -15,37 +15,29 @@ namespace AppLogger {
   /**
    * Log debug message
    */
-  export function debug(message: string, data?: unknown): void {
-    if (currentLevel <= LogLevel.DEBUG) {
-      console.log(`[DEBUG] ${Utils.formatTimestamp(new Date())} - ${message}`, data || '');
-    }
+  export function debug(_message: string, _data?: unknown): void {
+    // Debug logging disabled in production
   }
   
   /**
    * Log info message
    */
-  export function info(message: string, data?: unknown): void {
-    if (currentLevel <= LogLevel.INFO) {
-      console.info(`[INFO] ${Utils.formatTimestamp(new Date())} - ${message}`, data || '');
-    }
+  export function info(_message: string, _data?: unknown): void {
+    // Info logging disabled in production
   }
   
   /**
    * Log warning message
    */
-  export function warn(message: string, data?: unknown): void {
-    if (currentLevel <= LogLevel.WARN) {
-      console.warn(`[WARN] ${Utils.formatTimestamp(new Date())} - ${message}`, data || '');
-    }
+  export function warn(_message: string, _data?: unknown): void {
+    // Warning logging disabled in production
   }
   
   /**
    * Log error message
    */
-  export function error(message: string, error?: unknown): void {
-    if (currentLevel <= LogLevel.ERROR) {
-      console.error(`[ERROR] ${Utils.formatTimestamp(new Date())} - ${message}`, error || '');
-    }
+  export function error(_message: string, _error?: unknown): void {
+    // Error logging disabled in production
   }
   
   /**

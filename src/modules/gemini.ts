@@ -104,7 +104,7 @@ namespace Gemini {
   /**
    * Get safety ratings from response
    */
-  export function getSafetyRatings(responseText: string): any {
+  export function getSafetyRatings(responseText: string): Types.SafetyRating[] | null {
     const parsed = Utils.jsonParse<any>(responseText);
     if (!parsed) {
       return null;
@@ -150,7 +150,7 @@ namespace Gemini {
     response?: Types.GeminiResponse;
     error?: string;
     apiResult: Types.GeminiCallResult;
-    safetyInfo?: any;
+    safetyInfo?: Types.SafetyRating[];
   } {
     const apiResult = callGenerateContent(apiKey, promptText);
     
@@ -161,7 +161,7 @@ namespace Gemini {
         success: false,
         error: `HTTP ${apiResult.code}${error ? `: ${error}` : ''}`,
         apiResult,
-        safetyInfo: getSafetyRatings(apiResult.text)
+        ...(getSafetyRatings(apiResult.text) && { safetyInfo: getSafetyRatings(apiResult.text)! })
       };
     }
     
@@ -172,7 +172,7 @@ namespace Gemini {
         success: false,
         error: 'Failed to parse Gemini response',
         apiResult,
-        safetyInfo: getSafetyRatings(apiResult.text)
+        ...(getSafetyRatings(apiResult.text) && { safetyInfo: getSafetyRatings(apiResult.text)! })
       };
     }
     
@@ -183,7 +183,7 @@ namespace Gemini {
         success: false,
         error: `Response validation failed: ${validationError}`,
         apiResult,
-        safetyInfo: getSafetyRatings(apiResult.text)
+        ...(getSafetyRatings(apiResult.text) && { safetyInfo: getSafetyRatings(apiResult.text)! })
       };
     }
     
@@ -191,7 +191,7 @@ namespace Gemini {
       success: true,
       response,
       apiResult,
-      safetyInfo: getSafetyRatings(apiResult.text)
+      ...(getSafetyRatings(apiResult.text) && { safetyInfo: getSafetyRatings(apiResult.text)! })
     };
   }
 }

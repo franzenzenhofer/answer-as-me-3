@@ -41,7 +41,7 @@ namespace Utils {
   /**
    * Safe JSON stringify
    */
-  export function jsonStringify(obj: any): string {
+  export function jsonStringify(obj: unknown): string {
     try {
       return JSON.stringify(obj);
     } catch (e) {
@@ -52,7 +52,7 @@ namespace Utils {
   /**
    * Safe JSON parse
    */
-  export function jsonParse<T = any>(str: string): T | null {
+  export function jsonParse<T = unknown>(str: string): T | null {
     try {
       return JSON.parse(str) as T;
     } catch (e) {
@@ -111,27 +111,6 @@ return '';
   }
   
   /**
-   * Get unique values from array
-   */
-  export function unique<T>(array: T[]): T[] {
-    return [...new Set(array)];
-  }
-  
-  /**
-   * Filter array by predicate
-   */
-  export function filter<T>(array: T[], predicate: (item: T) => boolean): T[] {
-    return array.filter(predicate);
-  }
-  
-  /**
-   * Map array with transform function
-   */
-  export function map<T, U>(array: T[], transform: (item: T) => U): U[] {
-    return array.map(transform);
-  }
-  
-  /**
    * Check if string is empty or whitespace
    */
   export function isEmpty(str: string | null | undefined): boolean {
@@ -145,10 +124,4 @@ return '';
     return Session.getActiveUser().getEmail();
   }
   
-  /**
-   * Create case-insensitive set from array
-   */
-  export function createLowerCaseSet(items: string[]): Set<string> {
-    return new Set(items.map(item => item.toLowerCase()));
-  }
 }

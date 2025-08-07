@@ -97,4 +97,19 @@ namespace Types {
     formInputs?: FormInputs;
     parameters?: EventParameters;
   }
+
+  export interface SafetyRating {
+    category: string;
+    probability: string;
+  }
+
+  // Settings
+  export interface Settings {
+    apiKey: string;
+    defaultMode: EmailMode;
+    defaultTone: EmailTone;
+    hasPromptDoc: boolean;
+    hasLogsFolder: boolean;
+  }
+
 }

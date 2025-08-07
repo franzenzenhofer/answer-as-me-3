@@ -2,6 +2,9 @@
  * Gmail module for Answer As Me 3
  */
 namespace GmailUtils {
+  // Export types
+  export type MessageMetadata = ReturnType<typeof getMessageMetadata>;
+  export type ThreadMetadata = ReturnType<typeof getThreadMetadata>;
   /**
    * Set Gmail access token for current session
    */
@@ -22,13 +25,6 @@ namespace GmailUtils {
    */
   export function getThreadFromMessage(message: GoogleAppsScript.Gmail.GmailMessage): GoogleAppsScript.Gmail.GmailThread {
     return message.getThread();
-  }
-  
-  /**
-   * Get thread subject
-   */
-  export function getThreadSubject(thread: GoogleAppsScript.Gmail.GmailThread): string {
-    return thread.getFirstMessageSubject() || '';
   }
   
   /**

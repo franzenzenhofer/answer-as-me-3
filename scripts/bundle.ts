@@ -52,7 +52,8 @@ const CORE_MODULES = [
   'logger',
   'state',
   'error-handler',
-  'ui'
+  'ui',
+  'generation'
 ];
 
 // Namespace mapping

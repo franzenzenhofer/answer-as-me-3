@@ -90,54 +90,86 @@ function buildSettingsCard(banner?: string): GoogleAppsScript.Card_Service.Card 
   const settings = State.getSettings();
   const sections: GoogleAppsScript.Card_Service.CardSection[] = [];
   
-  // Banner section
+  // Add sections
   if (banner) {
-    sections.push(UI.createSection(
-      UI.createTextParagraph(`⚠️ ${banner}`)
-    ));
+    sections.push(createBannerSection(banner));
   }
+  sections.push(createApiSection(settings));
+  sections.push(createDefaultsSection(settings));
+  sections.push(createPromptDocSection());
+  sections.push(createLogsSection());
+  sections.push(createDangerZoneSection());
   
-  // API section
-  sections.push(UI.createSectionWithHeader('API Configuration',
+  return UI.createCard(
+    UI.createHeader(Config.APP_NAME, 'Settings & Configuration'),
+    ...sections
+  );
+}
+
+/**
+ * Create banner section
+ */
+function createBannerSection(banner: string): GoogleAppsScript.Card_Service.CardSection {
+  return UI.createSection(
+    UI.createTextParagraph(`⚠️ ${banner}`)
+  );
+}
+
+/**
+ * Create API configuration section
+ */
+function createApiSection(settings: Types.Settings): GoogleAppsScript.Card_Service.CardSection {
+  return UI.createSectionWithHeader('API Configuration',
     UI.createTextInput('apiKey', 'Gemini API Key', settings.apiKey),
     UI.createButtonSet([
       UI.createButton('Save', 'saveSettings'),
       UI.createButton('Test Key', 'testApiKey'),
       UI.createOpenLinkButton('Get API Key', 'https://makersuite.google.com/app/apikey')
     ])
-  ));
-  
-  // Defaults section
-  sections.push(UI.createSectionWithHeader('Default Settings',
+  );
+}
+
+/**
+ * Create defaults section
+ */
+function createDefaultsSection(settings: Types.Settings): GoogleAppsScript.Card_Service.CardSection {
+  return UI.createSectionWithHeader('Default Settings',
     UI.createDropdown('defaultMode', 'Default Mode', Config.EMAIL.MODES, settings.defaultMode),
     UI.createDropdown('defaultTone', 'Default Tone', Config.EMAIL.TONES, settings.defaultTone),
     UI.createButton('Save All', 'saveSettings')
-  ));
-  
-  // Prompt Doc section
-  sections.push(UI.createSectionWithHeader('Prompt Document (Required)',
+  );
+}
+
+/**
+ * Create prompt document section
+ */
+function createPromptDocSection(): GoogleAppsScript.Card_Service.CardSection {
+  return UI.createSectionWithHeader('Prompt Document (Required)',
     UI.createTextParagraph('Controls AI behavior and response format'),
     UI.createButton('Create/Open Prompt Doc', 'openOrCreatePromptDoc')
-  ));
-  
-  // Logs section
-  sections.push(UI.createSectionWithHeader('Logs & Analytics',
+  );
+}
+
+/**
+ * Create logs section
+ */
+function createLogsSection(): GoogleAppsScript.Card_Service.CardSection {
+  return UI.createSectionWithHeader('Logs & Analytics',
     UI.createTextParagraph('Daily activity logs and API usage tracking'),
     UI.createButtonSet([
       UI.createButton('Create/Open Logs Folder', 'openOrCreateLogsFolder'),
       UI.createButton("Open Today's Log", 'openTodayLog')
     ])
-  ));
-  
-  // Danger Zone
-  sections.push(UI.createSectionWithHeader('Danger Zone',
+  );
+}
+
+/**
+ * Create danger zone section
+ */
+function createDangerZoneSection(): GoogleAppsScript.Card_Service.CardSection {
+  return UI.createSectionWithHeader('Danger Zone',
     UI.createTextParagraph('Factory reset removes all settings'),
     UI.createButton('Factory Reset', 'factoryReset', {}, CardService.TextButtonStyle.FILLED)
-  ));
-  
-  return UI.createCard(
-    UI.createHeader(Config.APP_NAME, 'Settings & Configuration'),
-    ...sections
   );
 }
 
@@ -389,79 +421,66 @@ function doGenerate(
     Validation.ensureAllRequirements();
     const validEvent = Validation.validateGmailEvent(event);
     
-    // Get message and thread
-    const message = GmailUtils.getMessageById(validEvent.gmail!.messageId!, validEvent.gmail!.accessToken!);
-    const thread = GmailUtils.getThreadFromMessage(message);
-    const metadata = GmailUtils.getMessageMetadata(message);
-    const threadMetadata = GmailUtils.getThreadMetadata(thread);
+    // Extract context
+    const context = Generation.extractContext(validEvent);
     
-    // Get mode and tone
-    const mode = Validation.getEmailMode(validEvent.formInputs);
-    const tone = Validation.getEmailTone(validEvent.formInputs, toneOverride);
-    
-    // Compute recipients
-    const recipients = Email.computeRecipients(thread, mode);
-    
-    // Get thread text
-    const fullText = Email.getThreadPlainText(thread);
-    const { text: threadText, truncated } = Email.truncateThreadText(fullText, Config.EMAIL.THREAD_MAX_CHARS);
+    // Apply tone override if provided
+    if (toneOverride) {
+      context.tone = toneOverride as Types.EmailTone;
+    }
     
     // Build prompt
-    const promptTemplate = Document.readPromptText();
-    const promptVars = Template.buildPromptVariables(
-      mode,
-      tone,
-      intent || '',
-      threadMetadata.firstSubject,
-      metadata.from,
-      recipients.to,
-      recipients.cc,
-      threadText
-    );
-    const promptText = Template.replaceVariables(promptTemplate, promptVars);
+    const promptText = Generation.buildPromptText({
+      ...context,
+      intent: intent || ''
+    });
     
     // Call Gemini
     const apiKey = Validation.ensureApiKey();
     const geminiResult = Gemini.generateEmailReply(apiKey, promptText);
     
     // Log the generation
-    AppLogger.logEmailGeneration({
-      mode,
-      tone,
-      intent: intent || '',
-      subject: threadMetadata.firstSubject,
-      recipients,
-      success: geminiResult.success,
-      ...(geminiResult.error && { error: geminiResult.error }),
-      apiResult: geminiResult.apiResult,
-      safetyInfo: geminiResult.safetyInfo,
-      truncated,
-      threadId: threadMetadata.id,
-      messageId: metadata.id
-    });
+    logGeneration(context, intent || '', geminiResult);
     
     if (!geminiResult.success || !geminiResult.response) {
       return ErrorHandler.createErrorResponse(geminiResult.error || 'Failed to generate reply');
     }
     
-    // Build preview
-    const preview: Types.PreviewData = {
-      mode,
-      tone,
-      intent: intent || '',
-      subject: Email.formatSubjectForMode(threadMetadata.firstSubject, mode),
-      to: recipients.to,
-      cc: recipients.cc,
-      body: geminiResult.response.body,
-      safeToSend: geminiResult.response.safeToSend,
-      truncated
-    };
+    // Build preview and return
+    const preview = Generation.buildPreviewData(geminiResult.response, {
+      ...context,
+      intent: intent || ''
+    });
     
     return UI.createActionResponse(
       UI.createNotification('Reply generated'),
       UI.createPushNavigation(buildPreviewCard(preview))
     );
   }, 'doGenerate')();
+}
+
+/**
+ * Log generation attempt
+ */
+function logGeneration(
+  context: ReturnType<typeof Generation.extractContext>,
+  intent: string,
+  geminiResult: ReturnType<typeof Gemini.generateEmailReply>
+): void {
+  AppLogger.logEmailGeneration({
+    mode: context.mode,
+    tone: context.tone,
+    intent,
+    subject: context.threadMetadata.firstSubject,
+    recipients: context.recipients,
+    success: geminiResult.success,
+    ...(geminiResult.error && { error: geminiResult.error }),
+    apiResult: geminiResult.apiResult,
+    safetyInfo: geminiResult.safetyInfo,
+    truncated: context.truncated,
+    threadId: context.threadMetadata.id,
+    messageId: context.metadata.id
+  });
 }
 
 // ===== COMPOSE ACTIONS =====

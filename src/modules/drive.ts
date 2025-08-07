@@ -34,7 +34,7 @@ namespace DriveUtils {
   /**
    * Create JSON file in logs folder
    */
-  export function createJsonFile(prefix: string, data: any): string {
+  export function createJsonFile(prefix: string, data: unknown): string {
     try {
       const timestamp = Date.now();
       const filename = `${prefix}-${timestamp}.json`;

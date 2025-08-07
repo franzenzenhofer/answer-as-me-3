@@ -2,6 +2,8 @@
  * Email module for Answer As Me 3
  */
 namespace Email {
+const EMPTY_RECIPIENTS: Types.Recipients = { to: [], cc: [] };
+
   /**
    * Extract email addresses from a string
    */
@@ -80,12 +82,12 @@ return [];
   export function computeRecipients(thread: GoogleAppsScript.Gmail.GmailThread, mode: Types.EmailMode): Types.Recipients {
     const messages = thread.getMessages();
     if (messages.length === 0) {
-      return { to: [], cc: [] };
+      return EMPTY_RECIPIENTS;
     }
     
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage) {
-      return { to: [], cc: [] };
+      return EMPTY_RECIPIENTS;
     }
     
     const to = extractEmailAddresses(lastMessage.getTo());

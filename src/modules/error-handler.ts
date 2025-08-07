@@ -92,13 +92,13 @@ namespace ErrorHandler {
   /**
    * Wrap function with error handling
    */
-  export function wrapWithErrorHandling<T extends (...args: any[]) => any>(
+  export function wrapWithErrorHandling<T extends (...args: unknown[]) => unknown>(
     fn: T,
     context: string
   ): T {
     return ((...args: Parameters<T>): ReturnType<T> => {
       try {
-        return fn(...args);
+        return fn(...args) as ReturnType<T>;
       } catch (error) {
         const appError = handleError(error, context);
         throw new Error(createUserMessage(appError));
@@ -115,19 +115,4 @@ namespace ErrorHandler {
     );
   }
   
-  /**
-   * Safe execute with fallback
-   */
-  export function safeExecute<T>(
-    fn: () => T,
-    fallback: T,
-    context: string
-  ): T {
-    try {
-      return fn();
-    } catch (error) {
-      handleError(error, context);
-      return fallback;
-    }
-  }
 }

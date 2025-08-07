@@ -81,27 +81,28 @@ namespace Validation {
   /**
    * Validate Gemini response object
    */
-  export function validateGeminiResponse(obj: any): string | null {
+  export function validateGeminiResponse(obj: unknown): string | null {
     if (!obj || typeof obj !== 'object') {
       return 'Response root is not an object';
     }
     
+    const response = obj as Record<string, unknown>;
     const required = Config.RESPONSE_SCHEMA.required;
     for (const field of required) {
-      if (!(field in obj)) {
+      if (!(field in response)) {
         return `Missing required field: ${field}`;
       }
     }
     
-    if (typeof obj.body !== 'string' || !obj.body.trim()) {
+    if (typeof response['body'] !== 'string' || !(response['body'] as string).trim()) {
       return 'Body field is invalid or empty';
     }
     
-    if (typeof obj.mode !== 'string' || !Utils.isInArray(Config.EMAIL.MODES, obj.mode)) {
+    if (typeof response['mode'] !== 'string' || !Utils.isInArray(Config.EMAIL.MODES, response['mode'] as string)) {
       return 'Mode field is invalid';
     }
     
-    if (typeof obj.safeToSend !== 'boolean') {
+    if (typeof response['safeToSend'] !== 'boolean') {
       return 'SafeToSend field is not a boolean';
     }
     
@@ -111,11 +112,12 @@ namespace Validation {
   /**
    * Validate Gmail event
    */
-  export function validateGmailEvent(event: any): Types.GmailAddOnEvent {
-    if (!event || !event.gmail || !event.gmail.messageId || !event.gmail.accessToken) {
+  export function validateGmailEvent(event: unknown): Types.GmailAddOnEvent {
+    const e = event as Types.GmailAddOnEvent;
+    if (!e || !e.gmail || !e.gmail.messageId || !e.gmail.accessToken) {
       Utils.throwError('Open an email thread via the add-on.');
     }
-    return event as Types.GmailAddOnEvent;
+    return e;
   }
   
   /**
