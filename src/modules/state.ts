@@ -1,96 +1,90 @@
 /**
- * State management module with proper encapsulation
+ * State management module for Answer As Me 3
+ * Uses PropertiesService for individual property storage
  */
 namespace State {
-  interface AppState {
-    userName?: string;
-    lastGreeting?: string;
-    greetingCount: number;
-    lastError?: string;
+  /**
+   * Save settings
+   */
+  export function saveSettings(settings: {
     apiKey?: string;
-  }
-  
-  // Private state
-  let currentState: AppState = {
-    greetingCount: 0
-  };
-  
-  // State getters
-  export function getUserName(): string | undefined {
-    return currentState.userName;
-  }
-  
-  export function getGreetingCount(): number {
-    return currentState.greetingCount;
-  }
-  
-  export function getLastGreeting(): string | undefined {
-    return currentState.lastGreeting;
-  }
-  
-  export function getApiKey(): string | undefined {
-    return currentState.apiKey;
-  }
-  
-  // State setters with validation
-  export function setUserName(name: string): void {
-    if (name && name.trim().length > 0) {
-      currentState.userName = name.trim();
-      saveToProperties();
+    defaultMode?: Types.EmailMode;
+    defaultTone?: Types.EmailTone;
+  }): void {
+    if (settings.apiKey !== undefined) {
+      Utils.setProperty(Config.PROPS.API_KEY, settings.apiKey);
+    }
+    
+    if (settings.defaultMode !== undefined) {
+      Utils.setProperty(Config.PROPS.DEFAULT_MODE, settings.defaultMode);
+    }
+    
+    if (settings.defaultTone !== undefined) {
+      Utils.setProperty(Config.PROPS.DEFAULT_TONE, settings.defaultTone);
     }
   }
   
-  export function incrementGreetingCount(): void {
-    currentState.greetingCount++;
-    saveToProperties();
+  /**
+   * Get all settings
+   */
+  export function getSettings(): {
+    apiKey: string;
+    defaultMode: Types.EmailMode;
+    defaultTone: Types.EmailTone;
+    hasPromptDoc: boolean;
+    hasLogsFolder: boolean;
+  } {
+    return {
+      apiKey: Utils.getProperty(Config.PROPS.API_KEY),
+      defaultMode: Validation.validateEmailMode(
+        Utils.getProperty(Config.PROPS.DEFAULT_MODE, Config.DEFAULTS.MODE)
+      ),
+      defaultTone: Validation.validateEmailTone(
+        Utils.getProperty(Config.PROPS.DEFAULT_TONE, Config.DEFAULTS.TONE)
+      ),
+      hasPromptDoc: Document.promptDocExists(),
+      hasLogsFolder: Drive.logsFolderExists()
+    };
   }
   
-  export function setLastGreeting(greeting: string): void {
-    currentState.lastGreeting = greeting;
-    delete currentState.lastError; // Clear error on success
-    saveToProperties();
+  /**
+   * Clear all settings (factory reset)
+   */
+  export function clearAllSettings(): void {
+    Utils.getProperties().deleteAllProperties();
   }
   
-  export function setLastError(error: string): void {
-    currentState.lastError = error;
-    AppLogger.error('State error recorded', error);
+  /**
+   * Check if all requirements are configured
+   */
+  export function isFullyConfigured(): boolean {
+    const settings = getSettings();
+    return !!(
+      settings.apiKey &&
+      settings.hasPromptDoc &&
+      settings.hasLogsFolder
+    );
   }
   
-  export function setApiKey(key: string): void {
-    currentState.apiKey = key;
-    saveToProperties();
-  }
-  
-  // Persistence methods
-  export function loadFromProperties(): void {
-    try {
-      const userProperties = PropertiesService.getUserProperties();
-      const stored = userProperties.getProperty('appState');
-      
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        currentState = { ...currentState, ...parsed };
-        AppLogger.info('State loaded from properties', currentState);
-      }
-    } catch (error) {
-      AppLogger.error('Failed to load state from properties', error);
+  /**
+   * Get missing requirements
+   */
+  export function getMissingRequirements(): string[] {
+    const missing: string[] = [];
+    const settings = getSettings();
+    
+    if (!settings.apiKey) {
+      missing.push('API key');
     }
-  }
-  
-  function saveToProperties(): void {
-    try {
-      const userProperties = PropertiesService.getUserProperties();
-      userProperties.setProperty('appState', JSON.stringify(currentState));
-      AppLogger.debug('State saved to properties');
-    } catch (error) {
-      AppLogger.error('Failed to save state to properties', error);
+    
+    if (!settings.hasPromptDoc) {
+      missing.push('Prompt document');
     }
-  }
-  
-  export function reset(): void {
-    currentState = { greetingCount: 0 };
-    const userProperties = PropertiesService.getUserProperties();
-    userProperties.deleteProperty('appState');
-    AppLogger.info('State reset');
+    
+    if (!settings.hasLogsFolder) {
+      missing.push('Logs folder');
+    }
+    
+    return missing;
   }
 }
