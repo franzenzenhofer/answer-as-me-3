@@ -45,6 +45,8 @@
     "dist/**/*",
     "node_modules/**/*",
     "coverage/**/*",
-    "*.js"
+    "*.js",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

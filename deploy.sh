@@ -239,10 +239,9 @@ if [[ "$DRY_RUN" == true ]]; then
     echo "${DRY_RUN_PREFIX}Would change to dist/ directory"
 else
     # Ensure .clasp.json exists in dist with correct config
-    # Note: You'll need to replace this scriptId with your actual script ID after creating the project
     cat > dist/.clasp.json << EOF
 {
-  "scriptId": "YOUR_SCRIPT_ID_HERE",
+  "scriptId": "197HGcHZYyIkxSmoedQu9gixNURSmMi6_lqCsfsY3kYi4THzRCEl4nwi1",
   "rootDir": "."
 }
 EOF
@@ -465,7 +464,7 @@ else
         echo "🎯 SUCCESS: Version $VERSION is deployed as a SINGLE FILE!"
         echo ""
         echo "📋 TO VERIFY:"
-        echo "1. Open: https://script.google.com/d/YOUR_SCRIPT_ID_HERE/edit"
+        echo "1. Open: https://script.google.com/d/197HGcHZYyIkxSmoedQu9gixNURSmMi6_lqCsfsY3kYi4THzRCEl4nwi1/edit"
         echo "2. You should see ONLY Code.gs (no other .gs files)"
         echo "3. Run onHomepage() function to test"
         echo ""
