@@ -6,36 +6,81 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Answer As Me 3** is a production-ready modular Google Apps Script Gmail add-on built with TypeScript. It's an AI-powered email assistant that generates contextual replies using Google's Gemini API.
 
-## Core Principles
+## Development Philosophy
 
-### MODULAR Architecture
+### Core Principles
+
+#### MODULAR Architecture
 - **One file per function**: Each module has a single responsibility
 - **No monolithic files**: Split functionality across focused modules
 - **Clear module boundaries**: Each module exports a namespace with related functions
 
-### SOLID Principles
+#### SOLID Principles
 - **Single Responsibility**: Each module handles one aspect (e.g., email parsing, API calls)
 - **Open/Closed**: Modules are open for extension but closed for modification
 - **Liskov Substitution**: Interfaces and types ensure proper substitution
 - **Interface Segregation**: Small, focused interfaces over large ones
 - **Dependency Inversion**: Depend on abstractions (types) not concretions
 
-### DRY (Don't Repeat Yourself)
+#### DRY (Don't Repeat Yourself)
 - Shared logic extracted to utility modules
 - Configuration centralized in Config namespace
 - Reusable UI components in UI module
 
-### KISS (Keep It Simple, Stupid)
+#### KISS (Keep It Simple, Stupid)
 - Simple, readable code over clever solutions
 - Clear naming conventions
 - Minimal nesting and complexity
 
-### Bug-Free Development
+### Quality Standards
+
+#### Bug-Free Development
 - **100% Type Safety**: No `any` types without explicit reason
 - **Comprehensive Testing**: Every module has corresponding tests
 - **No Test Left Behind**: All functionality must be tested
 - **Root Cause Analysis**: Fix the cause, not symptoms
 - **Fail Fast**: Validate early and throw clear errors
+
+#### Testing Requirements
+- Write tests BEFORE or WITH implementation
+- Test coverage must be 100% for new code
+- Tests must be meaningful, not just for coverage
+- Integration tests for module interactions
+- Post-bundle validation for deployment
+
+### Development Workflow
+
+#### Atomic Commits
+- One logical change per commit
+- Commit after each module/test completion
+- Use conventional commit messages
+- Never commit broken code
+
+#### Before Each Commit
+1. Run `npm run lint` - must pass with 0 errors
+2. Run `npm test` - all tests must pass
+3. Run `npm run build` - must compile successfully
+4. Verify no TypeScript errors or warnings
+
+#### Deployment Process
+- Always use `npm run deploy` for production
+- Never use `npm run push` directly
+- Test in Gmail after deployment
+- Document any issues found
+
+### Root Cause Analysis
+
+When bugs occur:
+1. **Identify**: What exactly is broken?
+2. **Reproduce**: Create minimal test case
+3. **Analyze**: Why did it break? (ask "why" 5-7 times)
+4. **Fix**: Address root cause, not symptoms
+5. **Prevent**: Add tests to prevent recurrence
+6. **Document**: Update relevant documentation
+
+## Technical Details
+
+For detailed architecture and module structure, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Architecture
 
