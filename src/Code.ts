@@ -1,5 +1,8 @@
 /// <reference path="modules/config.ts" />
 /// <reference path="modules/types.ts" />
+/// <reference path="modules/contracts.ts" />
+/// <reference path="modules/algorithms.ts" />
+/// <reference path="modules/cs-utils.ts" />
 /// <reference path="modules/utils.ts" />
 /// <reference path="modules/validation.ts" />
 /// <reference path="modules/template.ts" />
@@ -12,6 +15,7 @@
 /// <reference path="modules/logger.ts" />
 /// <reference path="modules/state.ts" />
 /// <reference path="modules/ui.ts" />
+/// <reference path="modules/generation.ts" />
 /// <reference path="modules/error-handler.ts" />
 
 /**

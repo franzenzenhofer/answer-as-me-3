@@ -1,6 +1,7 @@
 /**
  * Computer Science utilities for improved performance
  * Implements algorithmic improvements based on CS audit
+ * Enhanced with formal contracts and invariants
  */
 namespace CSUtils {
   // Cache for email validation using LRU
@@ -16,8 +17,17 @@ namespace CSUtils {
   /**
    * Efficient email validation with caching
    * @complexity O(1) for cached, O(n) for new emails where n is email length
+   * @contract ensures consistent validation results
    */
   export function isValidEmail(email: string): boolean {
+    // Precondition
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.requires(
+        email !== null && email !== undefined,
+        'Email must not be null'
+      );
+    }
+    
     // Check cache first
     const cached = emailCache.get(email);
     if (cached !== undefined) {
@@ -29,6 +39,14 @@ namespace CSUtils {
     
     // Cache result
     emailCache.put(email, isValid);
+    
+    // Postcondition: cache contains the result
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.ensures(
+        emailCache.get(email) === isValid,
+        'Cache must contain validation result'
+      );
+    }
     
     return isValid;
   }
@@ -93,6 +111,7 @@ namespace CSUtils {
   
   /**
    * Circuit breaker for API calls
+   * Implements Nygard's stability patterns
    */
   export class CircuitBreaker {
     private failures = 0;
@@ -102,10 +121,22 @@ namespace CSUtils {
     private readonly timeout = 60000; // 1 minute
     
     /**
+     * Check class invariants
+     */
+    private checkInvariants(): void {
+      if (Contracts.ENABLE_CONTRACTS) {
+        Contracts.CircuitBreakerContracts.checkCircuitBreakerInvariant(this);
+      }
+    }
+    
+    /**
      * Execute function with circuit breaker protection
      * @complexity O(1) for state check
+     * @contract ensures valid state transitions
      */
     async execute<T>(fn: () => T): Promise<T> {
+      this.checkInvariants();
+      
       // Check if circuit is open
       if (this.state === 'OPEN') {
         const now = Date.now();
@@ -113,7 +144,7 @@ namespace CSUtils {
           throw new Error('Circuit breaker is OPEN - API temporarily unavailable');
         }
         // Try half-open
-        this.state = 'HALF_OPEN';
+        this.transitionTo('HALF_OPEN');
       }
       
       try {
@@ -123,12 +154,16 @@ namespace CSUtils {
       } catch (error) {
         this.onFailure();
         throw error;
+      } finally {
+        this.checkInvariants();
       }
     }
     
     private onSuccess(): void {
       this.failures = 0;
-      this.state = 'CLOSED';
+      if (this.state === 'HALF_OPEN') {
+        this.transitionTo('CLOSED');
+      }
     }
     
     private onFailure(): void {
@@ -136,9 +171,16 @@ namespace CSUtils {
       this.lastFailTime = Date.now();
       
       if (this.failures >= this.threshold) {
-        this.state = 'OPEN';
+        this.transitionTo('OPEN');
         AppLogger.error('Circuit breaker opened due to repeated failures');
       }
+    }
+    
+    private transitionTo(newState: 'CLOSED' | 'OPEN' | 'HALF_OPEN'): void {
+      if (Contracts.ENABLE_CONTRACTS) {
+        Contracts.CircuitBreakerContracts.requireValidTransition(this.state, newState);
+      }
+      this.state = newState;
     }
     
     getState(): string {

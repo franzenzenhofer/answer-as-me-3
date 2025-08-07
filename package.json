@@ -39,6 +39,7 @@
     "deploy:major": "tsx scripts/deploy.ts --major",
     "deploy:minor": "tsx scripts/deploy.ts --minor",
     "deploy:patch": "tsx scripts/deploy.ts --patch",
+    "deploy:force": "npm run build && npm run bundle && tsx scripts/deploy.ts",
     "open": "clasp open",
     "logs": "clasp logs",
     "setup": "npm install && npm run build",

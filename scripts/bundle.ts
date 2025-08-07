@@ -40,6 +40,7 @@ const MODULES_DIR = path.join(SRC_DIR, 'modules');
 const CORE_MODULES = [
   'config',
   'types',
+  'contracts',
   'utils',
   'algorithms',
   'cs-utils',
@@ -62,6 +63,7 @@ const CORE_MODULES = [
 const NAMESPACE_MAP: Record<string, string> = {
   'Config': 'config',
   'Types': 'types',
+  'Contracts': 'contracts',
   'Utils': 'utils',
   'Algorithms': 'algorithms',
   'CSUtils': 'cs-utils',

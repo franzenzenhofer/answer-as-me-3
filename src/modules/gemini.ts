@@ -1,5 +1,6 @@
 /**
  * Gemini module for Answer As Me 3
+ * Enhanced with contracts for API reliability
  */
 namespace Gemini {
   /**
@@ -44,8 +45,15 @@ namespace Gemini {
   
   /**
    * Call Gemini API with JSON response
+   * @contract ensures valid API call with proper error handling
    */
   export function callGenerateContent(apiKey: string, promptText: string): Types.GeminiCallResult {
+    // Preconditions
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.APIContracts.requireAPIKey(apiKey);
+      Contracts.APIContracts.requireValidPrompt(promptText);
+    }
+    
     const startTime = Date.now();
     
     const payload = {
@@ -83,12 +91,26 @@ namespace Gemini {
   
   /**
    * Extract JSON from Gemini response wrapper
+   * @contract ensures safe extraction from API response
    */
   export function extractJsonFromResponse(responseText: string): string {
+    // Precondition
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.requires(
+        responseText !== null && responseText !== undefined,
+        'Response text must not be null'
+      );
+    }
+    
     const parsed = Utils.jsonParse<any>(responseText);
     
     if (!parsed || !parsed.candidates || !parsed.candidates[0]) {
       return '';
+    }
+    
+    // Validate API response structure
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.APIContracts.ensureValidResponse(parsed);
     }
     
     const parts = parsed.candidates[0].content?.parts;
@@ -151,6 +173,7 @@ namespace Gemini {
   
   /**
    * Generate email reply using Gemini
+   * @contract ensures complete error handling and response validation
    */
   export function generateEmailReply(
     apiKey: string,
@@ -162,6 +185,8 @@ namespace Gemini {
     apiResult: Types.GeminiCallResult;
     safetyInfo?: Types.SafetyRating[];
   } {
+    // Remove circuit breaker for now - GAS doesn't support async well
+    // return CSUtils.geminiCircuitBreaker.execute(() => {
     const apiResult = callGenerateContent(apiKey, promptText);
     
     // Check HTTP status
@@ -197,11 +222,26 @@ namespace Gemini {
       };
     }
     
-    return {
+    const result = {
       success: true,
       response,
       apiResult,
       ...(getSafetyRatings(apiResult.text) && { safetyInfo: getSafetyRatings(apiResult.text)! })
     };
+    
+    // Postcondition: successful result has valid response
+    if (Contracts.ENABLE_CONTRACTS && result.success) {
+      Contracts.ensures(
+        result.response !== undefined && result.response !== null,
+        'Successful result must have response'
+      );
+      Contracts.ensures(
+        !!(result.response!.body && result.response!.subject),
+        'Response must have body and subject'
+      );
+    }
+    
+    return result;
+    // }); // End circuit breaker execute
   }
 }

@@ -1,16 +1,40 @@
 /**
  * State management module for Answer As Me 3
  * Uses PropertiesService for individual property storage
+ * Enhanced with contracts for state consistency
  */
 namespace State {
   /**
    * Save settings
+   * @contract ensures valid settings are persisted
    */
   export function saveSettings(settings: {
     apiKey?: string;
     defaultMode?: Types.EmailMode;
     defaultTone?: Types.EmailTone;
   }): void {
+    // Precondition: validate settings structure
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.StateContracts.requireValidSettings(settings);
+      
+      // Validate specific fields if provided
+      if (settings.apiKey !== undefined) {
+        Contracts.APIContracts.requireAPIKey(settings.apiKey);
+      }
+      if (settings.defaultMode !== undefined) {
+        Contracts.requires(
+          CSUtils.isValidMode(settings.defaultMode),
+          'Invalid email mode'
+        );
+      }
+      if (settings.defaultTone !== undefined) {
+        Contracts.requires(
+          CSUtils.isValidTone(settings.defaultTone),
+          'Invalid email tone'
+        );
+      }
+    }
+    
     if (settings.apiKey !== undefined) {
       Utils.setProperty(Config.PROPS.API_KEY, settings.apiKey);
     }
@@ -22,10 +46,21 @@ namespace State {
     if (settings.defaultTone !== undefined) {
       Utils.setProperty(Config.PROPS.DEFAULT_TONE, settings.defaultTone);
     }
+    
+    // Postcondition: settings are saved
+    if (Contracts.ENABLE_CONTRACTS) {
+      if (settings.apiKey !== undefined) {
+        Contracts.ensures(
+          Utils.getProperty(Config.PROPS.API_KEY) === settings.apiKey,
+          'API key must be saved'
+        );
+      }
+    }
   }
   
   /**
    * Get all settings
+   * @contract ensures consistent state retrieval
    */
   export function getSettings(): {
     apiKey: string;
@@ -34,7 +69,7 @@ namespace State {
     hasPromptDoc: boolean;
     hasLogsFolder: boolean;
   } {
-    return {
+    const result = {
       apiKey: Utils.getProperty(Config.PROPS.API_KEY),
       defaultMode: Validation.validateEmailMode(
         Utils.getProperty(Config.PROPS.DEFAULT_MODE, Config.DEFAULTS.MODE)
@@ -45,6 +80,20 @@ namespace State {
       hasPromptDoc: Document.promptDocExists(),
       hasLogsFolder: DriveUtils.logsFolderExists()
     };
+    
+    // Postcondition: ensure valid state
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.ensures(
+        CSUtils.isValidMode(result.defaultMode),
+        'Default mode must be valid'
+      );
+      Contracts.ensures(
+        CSUtils.isValidTone(result.defaultTone),
+        'Default tone must be valid'
+      );
+    }
+    
+    return result;
   }
   
   /**
@@ -56,14 +105,25 @@ namespace State {
   
   /**
    * Check if all requirements are configured
+   * @contract ensures accurate configuration status
    */
   export function isFullyConfigured(): boolean {
     const settings = getSettings();
-    return !!(
+    const result = !!(
       settings.apiKey &&
       settings.hasPromptDoc &&
       settings.hasLogsFolder
     );
+    
+    // Invariant: if fully configured, no missing requirements
+    if (Contracts.ENABLE_CONTRACTS && result) {
+      Contracts.invariant(
+        getMissingRequirements().length === 0,
+        'Fully configured state must have no missing requirements'
+      );
+    }
+    
+    return result;
   }
   
   /**

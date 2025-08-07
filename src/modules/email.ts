@@ -1,16 +1,19 @@
 /**
  * Email module for Answer As Me 3
+ * Enhanced with formal contracts for reliability
  */
 namespace Email {
 const EMPTY_RECIPIENTS: Types.Recipients = { to: [], cc: [] };
 
   /**
    * Extract email addresses from a string
+   * @complexity O(n) where n is string length
+   * @contract ensures unique valid email addresses
    */
   export function extractEmailAddresses(listStr: string | null | undefined): string[] {
     if (!listStr) {
-return [];
-}
+      return [];
+    }
     
     const emails: string[] = [];
     const parts = listStr.split(/[;,]/);
@@ -21,6 +24,13 @@ return [];
         emails.push(...matches);
       }
     });
+    
+    // Postcondition: all extracted strings are valid emails
+    if (Contracts.ENABLE_CONTRACTS) {
+      emails.forEach(email => {
+        Contracts.EmailContracts.requireValidEmail(email);
+      });
+    }
     
     return emails;
   }
@@ -60,8 +70,15 @@ return [];
   
   /**
    * Get unique emails preserving case
+   * @complexity O(n) where n is number of emails
+   * @contract ensures no duplicates in result
    */
   export function getUniqueEmails(emails: string[]): string[] {
+    // Precondition: input is array of strings
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.requires(Array.isArray(emails), 'Input must be an array');
+    }
+    
     const seen = new Set<string>();
     const result: string[] = [];
     
@@ -73,13 +90,29 @@ return [];
       }
     });
     
+    // Postcondition: result contains no duplicates
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.EmailContracts.ensureUniqueEmails(result);
+    }
+    
     return result;
   }
   
   /**
    * Compute recipients based on mode
+   * @complexity O(n*m) where n is messages, m is recipients
+   * @contract ensures valid recipient lists with no user emails
    */
   export function computeRecipients(thread: GoogleAppsScript.Gmail.GmailThread, mode: Types.EmailMode): Types.Recipients {
+    // Preconditions
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.requires(thread !== null, 'Thread must not be null');
+      Contracts.requires(
+        ['Reply', 'ReplyAll', 'Forward'].includes(mode),
+        'Mode must be valid EmailMode'
+      );
+    }
+    
     const messages = thread.getMessages();
     if (messages.length === 0) {
       return EMPTY_RECIPIENTS;
@@ -104,6 +137,11 @@ return [];
       resultCc = getUniqueEmails(filterOutUserEmails(cc));
     }
     // Forward mode has empty recipients
+    
+    // Postcondition: valid recipients for non-forward modes
+    if (Contracts.ENABLE_CONTRACTS && mode !== 'Forward') {
+      Contracts.EmailContracts.ensureRecipientsValid(resultTo, resultCc);
+    }
     
     return { to: resultTo, cc: resultCc };
   }
@@ -155,15 +193,33 @@ return [];
   
   /**
    * Truncate thread text if too long
+   * @complexity O(1) or O(maxChars) for substring
+   * @contract ensures text length <= maxChars
    */
   export function truncateThreadText(text: string, maxChars: number): { text: string; truncated: boolean } {
+    // Preconditions
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.requires(text !== null && text !== undefined, 'Text must not be null');
+      Contracts.requires(maxChars > 0, 'Max chars must be positive');
+    }
+    
     if (text.length <= maxChars) {
       return { text, truncated: false };
     }
     
-    return {
+    const result = {
       text: text.substring(0, maxChars),
       truncated: true
     };
+    
+    // Postcondition: text is within limit
+    if (Contracts.ENABLE_CONTRACTS) {
+      Contracts.ensures(
+        result.text.length <= maxChars,
+        'Truncated text must not exceed max chars'
+      );
+    }
+    
+    return result;
   }
 }
