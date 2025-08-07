@@ -108,10 +108,12 @@ namespace Contracts {
         apiKey !== null && apiKey.length > 0,
         'API key must be provided'
       );
-      requires(
-        apiKey!.startsWith('AIza'),
-        'API key must be valid Gemini API key format'
-      );
+      if (apiKey !== null) {
+        requires(
+          apiKey.startsWith('AIza'),
+          'API key must be valid Gemini API key format'
+        );
+      }
     }
 
     /**
@@ -131,7 +133,7 @@ namespace Contracts {
     /**
      * Validate API response postcondition
      */
-    export function ensureValidResponse(response: any): void {
+    export function ensureValidResponse(response: unknown): void {
       ensures(
         response !== null && typeof response === 'object',
         'API response must be an object'
@@ -150,7 +152,7 @@ namespace Contracts {
     /**
      * Validate state consistency invariant
      */
-    export function checkStateInvariant(state: any): void {
+    export function checkStateInvariant(state: unknown): void {
       invariant(
         state === null || typeof state === 'object',
         'State must be null or object'
@@ -171,7 +173,7 @@ namespace Contracts {
     /**
      * Validate settings precondition
      */
-    export function requireValidSettings(settings: any): void {
+    export function requireValidSettings(settings: unknown): void {
       requires(
         settings !== null && typeof settings === 'object',
         'Settings must be an object'
@@ -194,7 +196,7 @@ namespace Contracts {
     /**
      * Validate Bloom filter invariants
      */
-    export function checkBloomFilterInvariant(filter: any): void {
+    export function checkBloomFilterInvariant(filter: { k: number; size: number; count: number }): void {
       invariant(
         filter.k > 0 && filter.k <= 20,
         'Number of hash functions must be between 1 and 20'
@@ -212,7 +214,7 @@ namespace Contracts {
     /**
      * Validate LRU cache invariants
      */
-    export function checkLRUCacheInvariant(cache: any): void {
+    export function checkLRUCacheInvariant(cache: { capacity: number; size: number }): void {
       invariant(
         cache.capacity > 0,
         'Cache capacity must be positive'
@@ -226,7 +228,7 @@ namespace Contracts {
     /**
      * Validate Trie invariants
      */
-    export function checkTrieInvariant(node: any): void {
+    export function checkTrieInvariant(node: { children: Map<string, unknown>; isEndOfWord: boolean }): void {
       invariant(
         node.children instanceof Map,
         'Trie node children must be a Map'
@@ -261,7 +263,7 @@ namespace Contracts {
     /**
      * Validate circuit breaker invariants
      */
-    export function checkCircuitBreakerInvariant(breaker: any): void {
+    export function checkCircuitBreakerInvariant(breaker: { state: string; failureCount: number; threshold: number }): void {
       invariant(
         ['CLOSED', 'OPEN', 'HALF_OPEN'].includes(breaker.state),
         'Circuit breaker must be in valid state'
@@ -281,7 +283,7 @@ namespace Contracts {
    * Contract-enabled function wrapper
    * Automatically checks preconditions, postconditions, and invariants
    */
-  export function withContract<T extends (...args: any[]) => any>(
+  export function withContract<T extends (...args: never[]) => unknown>(
     fn: T,
     options: {
       pre?: (args: Parameters<T>) => void;

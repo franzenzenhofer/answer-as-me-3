@@ -43,12 +43,13 @@ function log(message: string, level: 'info' | 'success' | 'error' | 'warn' = 'in
   console.log(colors[level](message));
 }
 
-function execCommand(cmd: string, options: { silent?: boolean } = {}): string {
+function execCommand(cmd: string, options: { silent?: boolean; timeout?: number } = {}): string {
   try {
     const output = execSync(cmd, {
       cwd: PROJECT_ROOT,
       encoding: 'utf8',
-      stdio: options.silent ? 'pipe' : 'inherit'
+      stdio: options.silent ? 'pipe' : 'inherit',
+      timeout: options.timeout || 350000 // 5 min 50 seconds default
     });
     return output ? output.toString().trim() : '';
   } catch (error) {
@@ -305,11 +306,11 @@ async function deployToGAS(options: DeployOptions): Promise<string> {
   process.chdir(DIST_DIR);
   
   try {
-    // Push the code
-    execCommand('clasp push --force');
+    // Push the code with explicit timeout
+    execCommand('clasp push --force', { timeout: 350000 }); // 5 min 50 sec
     
     // Create a new deployment
-    const deployOutput = execCommand('clasp deploy --description "Automated deployment"', { silent: true });
+    const deployOutput = execCommand('clasp deploy --description "Automated deployment"', { silent: true, timeout: 60000 }); // 1 min for deploy
     
     // Try to extract deployment ID - different formats
     let version = 'unknown';

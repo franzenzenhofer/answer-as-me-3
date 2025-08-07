@@ -29,7 +29,7 @@
       "error",
       {
         "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_|^(Config|Types|Utils|Algorithms|CSUtils|Validation|Template|Email|GmailUtils|Gemini|Document|DriveUtils|SheetsUtils|AppLogger|State|ErrorHandler|UI|Generation|onHomepage|onSettings|onGmailMessage|onComposeAction|buildSettingsCard|buildDetailCard|buildPreviewCard|saveSettings|testApiKey|openOrCreatePromptDoc|openOrCreateLogsFolder|openTodayLog|factoryReset|generateReply|generateWithIntent|doGenerate|composeReplyInThread|composeReplyAllInThread|composeForwardInThread|useInComposeStandalone|testAddon)$"
+        "varsIgnorePattern": "^_|^(Config|Types|Contracts|Utils|Algorithms|CSUtils|Validation|Template|Email|GmailUtils|Gemini|Document|DriveUtils|SheetsUtils|AppLogger|State|ErrorHandler|UI|Generation|onHomepage|onSettings|onGmailMessage|onComposeAction|buildSettingsCard|buildDetailCard|buildPreviewCard|saveSettings|testApiKey|openOrCreatePromptDoc|openOrCreateLogsFolder|openTodayLog|factoryReset|generateReply|generateWithIntent|doGenerate|composeReplyInThread|composeReplyAllInThread|composeForwardInThread|useInComposeStandalone|testAddon)$"
       }
     ],
     "@typescript-eslint/no-non-null-assertion": "warn",

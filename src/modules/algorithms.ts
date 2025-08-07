@@ -134,8 +134,8 @@ namespace Algorithms {
       this.cache = new Map();
       
       // Dummy head and tail for easier manipulation
-      this.head = new Node<K, V>(null as any, null as any);
-      this.tail = new Node<K, V>(null as any, null as any);
+      this.head = new Node<K, V>(null as unknown as K, null as unknown as V);
+      this.tail = new Node<K, V>(null as unknown as K, null as unknown as V);
       this.head.next = this.tail;
       this.tail.prev = this.head;
     }
