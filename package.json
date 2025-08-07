@@ -34,7 +34,7 @@
     "test:all": "npm-run-all --parallel test test:postbundle",
     "analyze": "tsx scripts/analyze-code.ts",
     "analyze:strict": "npm run analyze && npm run test:comprehensive",
-    "predeploy": "tsx scripts/predeploy-fast.ts && npm run validate:bundle",
+    "predeploy": "npm-run-all validate:all check:strict validate:bundle",
     "predeploy:slow": "npm-run-all validate:all check validate:bundle",
     "validate:bundle": "npm run build && tsx scripts/gas-bundle-validator.ts",
     "deploy": "tsx scripts/deploy.ts",

@@ -12,7 +12,9 @@ const EMPTY_RECIPIENTS: Types.Recipients = { to: [], cc: [] };
   const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig;
   
   export function extractEmailAddresses(listStr: string | null | undefined): string[] {
-    if (!listStr) return [];
+    if (!listStr) {
+      return [];
+    }
     
     // FAST: Single regex exec instead of split + match
     const matches = listStr.match(EMAIL_REGEX);
@@ -26,7 +28,9 @@ const EMPTY_RECIPIENTS: Types.Recipients = { to: [], cc: [] };
   let userEmailCache: Set<string> | null = null;
   
   export function getUserEmailAddresses(): Set<string> {
-    if (userEmailCache) return userEmailCache;
+    if (userEmailCache) {
+      return userEmailCache;
+    }
     
     userEmailCache = new Set<string>();
     const primaryEmail = Utils.getCurrentUserEmail();
