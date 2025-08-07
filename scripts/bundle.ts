@@ -37,11 +37,37 @@ const SRC_DIR = path.join(PROJECT_ROOT, 'src');
 const MODULES_DIR = path.join(SRC_DIR, 'modules');
 
 // Core modules in dependency order
-const CORE_MODULES = ['config', 'logger', 'state', 'error-handler', 'ui'];
+const CORE_MODULES = [
+  'config',
+  'types',
+  'utils',
+  'validation',
+  'template',
+  'email',
+  'gmail',
+  'gemini',
+  'document',
+  'drive',
+  'sheets',
+  'logger',
+  'state',
+  'error-handler',
+  'ui'
+];
 
 // Namespace mapping
 const NAMESPACE_MAP: Record<string, string> = {
   'Config': 'config',
+  'Types': 'types',
+  'Utils': 'utils',
+  'Validation': 'validation',
+  'Template': 'template',
+  'Email': 'email',
+  'Gmail': 'gmail',
+  'Gemini': 'gemini',
+  'Document': 'document',
+  'Drive': 'drive',
+  'Sheets': 'sheets',
   'AppLogger': 'logger',
   'State': 'state',
   'ErrorHandler': 'error-handler',

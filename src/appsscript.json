@@ -1,34 +1,49 @@
 {
   "timeZone": "Europe/Vienna",
-  "dependencies": {
-    "enabledAdvancedServices": []
-  },
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
-  "oauthScopes": [
-    "https://www.googleapis.com/auth/gmail.addons.execute",
-    "https://www.googleapis.com/auth/userinfo.email",
-    "https://www.googleapis.com/auth/script.external_request"
-  ],
-  "urlFetchWhitelist": [],
   "addOns": {
     "common": {
       "name": "Answer As Me 3",
-      "logoUrl": "https://www.gstatic.com/images/icons/material/system/2x/code_black_24dp.png",
-      "homepageTrigger": {
-        "enabled": true,
-        "runFunction": "onHomepage"
+      "logoUrl": "https://www.gstatic.com/images/icons/material/system/2x/auto_awesome_black_24dp.png",
+      "useLocaleFromApp": true,
+      "homepageTrigger": { 
+        "runFunction": "onHomepage", 
+        "enabled": true 
       },
       "universalActions": [{
-        "label": "Settings",
-        "runFunction": "showSettingsUniversal"
+        "label": "Settings", 
+        "runFunction": "onSettings" 
       }]
     },
     "gmail": {
-      "homepageTrigger": {
-        "enabled": true,
-        "runFunction": "onHomepage"
+      "homepageTrigger": { 
+        "enabled": true, 
+        "runFunction": "onHomepage" 
+      },
+      "contextualTriggers": [{
+        "unconditional": {}, 
+        "onTriggerFunction": "onGmailMessage" 
+      }],
+      "composeTrigger": {
+        "selectActions": [{
+          "text": "Generate Reply", 
+          "runFunction": "onComposeAction" 
+        }],
+        "draftAccess": "METADATA"
       }
     }
-  }
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/gmail.addons.execute",
+    "https://www.googleapis.com/auth/gmail.addons.current.message.readonly",
+    "https://www.googleapis.com/auth/gmail.addons.current.message.metadata",
+    "https://www.googleapis.com/auth/gmail.addons.current.action.compose",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/script.locale"
+  ]
 }
