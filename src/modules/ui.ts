@@ -5,8 +5,6 @@
 namespace UI {
   // Cache common UI elements for SPEED
   let cachedImageStyle: GoogleAppsScript.Card_Service.ImageStyle | null = null;
-  let cachedButtonStyle: GoogleAppsScript.Card_Service.TextButtonStyle | null = null;
-  let cachedDropdowns = new Map<string, GoogleAppsScript.Card_Service.SelectionInput>();
   /**
    * Create card header with icon
    */

@@ -1,6 +1,5 @@
 /// <reference path="modules/config.ts" />
 /// <reference path="modules/types.ts" />
-/// <reference path="modules/contracts.ts" />
 /// <reference path="modules/algorithms.ts" />
 /// <reference path="modules/cs-utils.ts" />
 /// <reference path="modules/utils.ts" />
@@ -325,7 +324,7 @@ function testApiKey(_event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Servic
     const parsed = Gemini.parseResponse(result.text);
     const success = result.code === 200 && parsed !== null && 'ping' in parsed;
     
-    AppLogger.logApiKeyTest(success, result, Gemini.getSafetyRatings(result.text));
+    AppLogger.logApiKeyTest(success, result, Gemini.getSafetyRatings(result.text) || undefined);
     
     return UI.createActionResponse(
       UI.createNotification(success ? '✅ API key is valid' : `❌ API key test failed: HTTP ${result.code}`)
@@ -480,7 +479,7 @@ function logGeneration(
     success: geminiResult.success,
     ...(geminiResult.error && { error: geminiResult.error }),
     apiResult: geminiResult.apiResult,
-    safetyInfo: geminiResult.safetyInfo,
+    ...(geminiResult.safetyInfo && { safetyInfo: geminiResult.safetyInfo }),
     truncated: context.truncated,
     threadId: context.threadMetadata.id,
     messageId: context.metadata.id

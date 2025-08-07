@@ -57,7 +57,7 @@ namespace AppLogger {
   export function logApiKeyTest(
     success: boolean,
     result: Types.GeminiCallResult,
-    safetyInfo?: Types.GeminiSafetyRating[]
+    safetyInfo?: Types.SafetyRating[]
   ): void {
     const requestUrl = DriveUtils.createJsonFile('testkey-request', result.requestPayload);
     const responseData = Utils.jsonParse(result.text) || { raw: result.text };
@@ -91,7 +91,7 @@ namespace AppLogger {
       success: boolean;
       error?: string;
       apiResult: Types.GeminiCallResult;
-      safetyInfo?: Types.GeminiSafetyRating[];
+      safetyInfo?: Types.SafetyRating[];
       truncated: boolean;
       threadId: string;
       messageId: string;

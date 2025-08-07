@@ -225,7 +225,7 @@ ${TS_HELPERS}
   console.log(`   Path: ${outputPath}`);
   console.log(`   Size: ${size}KB`);
   console.log(`   Modules: ${MODULES.length}`);
-  console.log(`   Time: ${elapsed}s`));
+  console.log(`   Time: ${elapsed}s`);
 }
 
 // Execute

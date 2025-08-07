@@ -15,6 +15,22 @@ namespace Types {
   
   // Gemini Response
   export interface GeminiResponse {
+    candidates?: Array<{
+      content: {
+        parts: Array<{
+          text: string;
+        }>;
+      };
+      safetyRatings?: SafetyRating[];
+    }>;
+    promptFeedback?: {
+      safetyRatings?: SafetyRating[];
+    };
+    error?: {
+      code: number;
+      message: string;
+      status: string;
+    };
     body: string;
     subject: string;
     mode: EmailMode;
@@ -28,7 +44,7 @@ namespace Types {
     duration: number;
     respBytes: number;
     promptChars: number;
-    requestPayload: any;
+    requestPayload: unknown;
   }
   
   // Preview Data
@@ -99,6 +115,11 @@ namespace Types {
   }
 
   export interface SafetyRating {
+    category: string;
+    probability: string;
+  }
+  
+  export interface GeminiSafetyRating {
     category: string;
     probability: string;
   }
