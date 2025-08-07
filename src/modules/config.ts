@@ -1,17 +1,34 @@
 /**
  * Configuration module for Answer As Me 3
  */
+
+// Declare globals that will be injected at build time
+declare let DEPLOYMENT_VERSION: string | undefined;
+declare let DEPLOYMENT_TIMESTAMP: string | undefined;
+
 namespace Config {
   export const APP_NAME = 'Answer As Me 3';
-  export const VERSION = '__VERSION__'; // Will be replaced during build
-  export const DEPLOY_TIME = '__DEPLOY_TIME__'; // Will be replaced during build
+  export let VERSION = '__VERSION__'; // Will be replaced during build
+  export let DEPLOY_TIME = '__DEPLOY_TIME__'; // Will be replaced during build
   export const ICON_URL = 'https://www.gstatic.com/images/icons/material/system/2x/auto_awesome_black_24dp.png';
+  
+  // Runtime hydration for version info
+  try {
+    if (typeof DEPLOYMENT_VERSION !== 'undefined') {
+      VERSION = DEPLOYMENT_VERSION;
+    }
+    if (typeof DEPLOYMENT_TIMESTAMP !== 'undefined') {
+      DEPLOY_TIME = DEPLOYMENT_TIMESTAMP;
+    }
+  } catch (_) {
+    // Fallback to build-time placeholders
+  }
   
   // API Configuration
   export const GEMINI = {
     MODEL_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
     RESPONSE_MIME_TYPE: 'application/json',
-    RETRY_ATTEMPTS: 2,
+    RETRY_ATTEMPTS: 1,
     RETRY_BACKOFF_MS: 400
   };
   
@@ -20,7 +37,7 @@ namespace Config {
     THREAD_MAX_CHARS: 120000,
     PREVIEW_CHARS: 1200,
     MODES: ['Reply', 'ReplyAll', 'Forward'] as const,
-    TONES: ['Casual', 'Neutral', 'Formal'] as const,
+    TONES: ['Professional', 'Friendly', 'Casual', 'Formal', 'Humorous'] as const,
     INTENTS: ['Decline', 'AskFollowUps', 'Confirm', 'Schedule', 'Thanks'] as const
   };
   
@@ -32,13 +49,14 @@ namespace Config {
     PROMPT_DOC_ID: 'AAM3_PROMPT_DOC_ID',
     LOGS_FOLDER_ID: 'AAM3_LOGS_FOLDER_ID',
     TODAY_SHEET_ID: 'AAM3_TODAY_SHEET_ID',
-    TODAY_DATE: 'AAM3_TODAY_DATE'
+    TODAY_DATE: 'AAM3_TODAY_DATE',
+    LOGGING_ENABLED: 'AAM3_LOGGING_ENABLED'
   } as const;
   
   // Defaults
   export const DEFAULTS = {
     MODE: 'Reply' as const,
-    TONE: 'Neutral' as const
+    TONE: 'Professional' as const
   };
   
   // Logging Configuration

@@ -126,4 +126,12 @@ return '';
     return Session.getActiveUser().getEmail();
   }
   
+  /**
+   * Convert plain text to HTML with proper escaping
+   */
+  export function toHtml(body: string | null | undefined): string {
+    const escaped = escapeHtml(body || '');
+    return `<div>${escaped.replace(/\r?\n/g, '<br>')}</div>`;
+  }
+  
 }

@@ -60,4 +60,30 @@ return false;
       return false;
     }
   }
+  
+  /**
+   * Read prompt document text with caching
+   */
+  export function readPromptTextCached(): string {
+    const cache = CacheService.getUserCache();
+    const cacheKey = 'AAM3_PROMPT_DOC_V1';
+    
+    // Check cache first
+    const cached = cache?.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    
+    // Read from document
+    const text = readPromptText();
+    
+    // Cache for 5 minutes
+    try {
+      cache?.put(cacheKey, text, 300);
+    } catch (e) {
+      // Cache might be full, continue without caching
+    }
+    
+    return text;
+  }
 }

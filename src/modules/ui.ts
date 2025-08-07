@@ -72,6 +72,22 @@ namespace UI {
   }
   
   /**
+   * Create switch widget
+   */
+  export function createSwitch(
+    fieldName: string,
+    _title: string,
+    selected: boolean
+  ): GoogleAppsScript.Card_Service.Switch {
+    return CardService.newSwitch()
+      .setFieldName(fieldName)
+      .setControlType(CardService.SwitchControlType.SWITCH)
+      .setValue(selected ? 'true' : 'false')
+      .setOnChangeAction(CardService.newAction().setFunctionName('saveSettings'))
+      .setSelected(selected);
+  }
+  
+  /**
    * Create text button
    */
   export function createButton(

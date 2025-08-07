@@ -41,7 +41,7 @@ namespace DriveUtils {
       const content = Utils.jsonStringify(data);
       
       const blob = Utilities.newBlob(content, 'application/json', filename);
-      const folder = getLogsFolder();
+      const folder = getOrCreateLogsFolder(); // Changed to tolerant version
       const file = folder.createFile(blob);
       
       return file.getUrl();

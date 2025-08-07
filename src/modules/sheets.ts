@@ -2,10 +2,17 @@
  * Sheets module for Answer As Me 3
  */
 namespace SheetsUtils {
+  // In-memory cache for today's sheet
+  let todaySheetCache: GoogleAppsScript.Spreadsheet.Spreadsheet | null = null;
+  
   /**
    * Get or create today's log sheet
    */
   export function getTodaySheet(): GoogleAppsScript.Spreadsheet.Spreadsheet {
+    // Return cached sheet if available
+    if (todaySheetCache) {
+      return todaySheetCache;
+    }
     const today = Utils.formatDate(new Date());
     const cachedDate = Utils.getProperty(Config.PROPS.TODAY_DATE);
     const cachedId = Utils.getProperty(Config.PROPS.TODAY_SHEET_ID);
@@ -13,7 +20,9 @@ namespace SheetsUtils {
     // Use cached sheet if it's still today
     if (cachedDate === today && cachedId) {
       try {
-        return SpreadsheetApp.openById(cachedId);
+        const sheet = SpreadsheetApp.openById(cachedId);
+        todaySheetCache = sheet;
+        return sheet;
       } catch (e) {
         // Cached sheet no longer exists
       }
@@ -50,6 +59,9 @@ namespace SheetsUtils {
     Utils.setProperty(Config.PROPS.TODAY_SHEET_ID, spreadsheet.getId());
     Utils.setProperty(Config.PROPS.TODAY_DATE, today);
     
+    // Set in-memory cache
+    todaySheetCache = spreadsheet;
+    
     return spreadsheet;
   }
   
@@ -61,9 +73,9 @@ namespace SheetsUtils {
       const spreadsheet = getTodaySheet();
       const sheet = spreadsheet.getActiveSheet();
       
-      // Cap long strings to prevent cell overflow
+      // Cap long strings to prevent cell overflow (Sheets limit is ~50k)
       const capString = (value: string | undefined): string => {
-        return Utils.capString(value, 95000);
+        return Utils.capString(value, 49000);
       };
       
       // Build row data

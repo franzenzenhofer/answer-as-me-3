@@ -91,6 +91,8 @@ namespace Types {
     defaultTone?: string[];
     mode?: string[];
     tone?: string[];
+    loggingEnabled?: string[];
+    intent?: string[];
   }
   
   // Event Parameters

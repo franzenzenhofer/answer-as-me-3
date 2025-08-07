@@ -50,11 +50,12 @@ namespace Generation {
       truncated: boolean;
     }
   ): Types.PreviewData {
+    const baseSubject = context.threadMetadata.lastSubject || context.threadMetadata.firstSubject || '';
     return {
       mode: context.mode,
       tone: context.tone,
       intent: context.intent,
-      subject: Email.formatSubjectForMode(context.threadMetadata.firstSubject, context.mode),
+      subject: Email.formatSubjectForMode(baseSubject, context.mode),
       to: context.recipients.to,
       cc: context.recipients.cc,
       body: response.body,
@@ -77,12 +78,13 @@ namespace Generation {
       threadText: string;
     }
   ): string {
-    const promptTemplate = Document.readPromptText();
+    const promptTemplate = Document.readPromptTextCached();
+    const baseSubject = context.threadMetadata.lastSubject || context.threadMetadata.firstSubject || '';
     const promptVars = Template.buildPromptVariables(
       context.mode,
       context.tone,
       context.intent,
-      context.threadMetadata.firstSubject,
+      baseSubject,
       context.metadata.from,
       context.recipients.to,
       context.recipients.cc,

@@ -47,6 +47,10 @@ namespace AppLogger {
     action: string,
     data: Partial<Types.LogEntry>
   ): void {
+    // Check if logging is enabled
+    if (Utils.getProperty(Config.PROPS.LOGGING_ENABLED, 'true') !== 'true') {
+      return;
+    }
     const entry = SheetsUtils.formatLogEntry(action, data);
     SheetsUtils.writeLogEntry(entry);
   }
@@ -72,7 +76,7 @@ namespace AppLogger {
       RespBytes: result.respBytes,
       Notes: safetyInfo ? Utils.jsonStringify(safetyInfo) : '',
       RequestBody: Utils.jsonStringify(result.requestPayload),
-      ResponseBody: Utils.capString(result.text, 95000),
+      ResponseBody: Utils.capString(result.text, 49000),
       ReqFileUrl: requestUrl,
       RespFileUrl: responseUrl
     });
@@ -118,7 +122,7 @@ namespace AppLogger {
       MessageId: params.messageId,
       Notes: params.safetyInfo ? Utils.jsonStringify(params.safetyInfo) : '',
       RequestBody: Utils.jsonStringify(params.apiResult.requestPayload),
-      ResponseBody: Utils.capString(params.apiResult.text, 95000),
+      ResponseBody: Utils.capString(params.apiResult.text, 49000),
       ReqFileUrl: requestUrl,
       RespFileUrl: responseUrl
     });

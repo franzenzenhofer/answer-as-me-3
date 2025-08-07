@@ -33,7 +33,7 @@ namespace GmailUtils {
   export function buildDraftResponse(body: string): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
     return CardService.newUpdateDraftActionResponseBuilder()
       .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
-        .addUpdateContent(body, CardService.ContentType.MUTABLE_HTML)
+        .addUpdateContent(Utils.toHtml(body), CardService.ContentType.MUTABLE_HTML)
         .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
       .build();
   }
@@ -52,7 +52,7 @@ namespace GmailUtils {
       .setUpdateDraftCcRecipientsAction(CardService.newUpdateDraftCcRecipientsAction()
         .addUpdateCcRecipients(cc))
       .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
-        .addUpdateContent(body, CardService.ContentType.MUTABLE_HTML)
+        .addUpdateContent(Utils.toHtml(body), CardService.ContentType.MUTABLE_HTML)
         .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
       .build();
   }
@@ -68,7 +68,7 @@ namespace GmailUtils {
       .setUpdateDraftSubjectAction(CardService.newUpdateDraftSubjectAction()
         .addUpdateSubject(subject))
       .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
-        .addUpdateContent(body, CardService.ContentType.MUTABLE_HTML)
+        .addUpdateContent(Utils.toHtml(body), CardService.ContentType.MUTABLE_HTML)
         .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
       .build();
   }
@@ -90,7 +90,7 @@ namespace GmailUtils {
       .setUpdateDraftSubjectAction(CardService.newUpdateDraftSubjectAction()
         .addUpdateSubject(subject))
       .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
-        .addUpdateContent(body, CardService.ContentType.MUTABLE_HTML)
+        .addUpdateContent(Utils.toHtml(body), CardService.ContentType.MUTABLE_HTML)
         .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
       .build();
   }

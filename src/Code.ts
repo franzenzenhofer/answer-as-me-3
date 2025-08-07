@@ -80,7 +80,17 @@ function onGmailMessage(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Se
 function onComposeAction(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
   return ErrorHandler.wrapWithErrorHandling(() => {
     AppLogger.info('Compose action triggered');
-    return buildSettingsCard();
+    const settings = State.getSettings();
+    
+    return UI.createCard(
+      UI.createHeader(Config.APP_NAME, 'Compose Helper'),
+      UI.createSection(
+        UI.createDropdown('mode', 'Mode', Config.EMAIL.MODES, settings.defaultMode),
+        UI.createDropdown('tone', 'Tone', Config.EMAIL.TONES, settings.defaultTone),
+        UI.createTextInput('intent', 'What would you like to say?', ''),
+        UI.createButton('Generate Draft', 'generateForCompose', {}, CardService.TextButtonStyle.FILLED)
+      )
+    );
   }, 'onComposeAction')();
 }
 
@@ -127,7 +137,7 @@ function createApiSection(settings: Types.Settings): GoogleAppsScript.Card_Servi
     UI.createButtonSet([
       UI.createButton('Save', 'saveSettings'),
       UI.createButton('Test Key', 'testApiKey'),
-      UI.createOpenLinkButton('Get API Key', 'https://makersuite.google.com/app/apikey')
+      UI.createOpenLinkButton('Get API Key', 'https://aistudio.google.com/app/apikey')
     ])
   );
 }
@@ -157,8 +167,11 @@ function createPromptDocSection(): GoogleAppsScript.Card_Service.CardSection {
  * Create logs section
  */
 function createLogsSection(): GoogleAppsScript.Card_Service.CardSection {
+  const loggingEnabled = Utils.getProperty(Config.PROPS.LOGGING_ENABLED, 'true') === 'true';
+  
   return UI.createSectionWithHeader('Logs & Analytics',
     UI.createTextParagraph('Daily activity logs and API usage tracking'),
+    UI.createSwitch('loggingEnabled', 'Enable Logging', loggingEnabled),
     UI.createButtonSet([
       UI.createButton('Create/Open Logs Folder', 'openOrCreateLogsFolder'),
       UI.createButton("Open Today's Log", 'openTodayLog')
@@ -292,6 +305,7 @@ function saveSettings(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Servi
     const apiKey = Validation.getFormValue(formInputs, 'apiKey');
     const defaultMode = Validation.getFormValue(formInputs, 'defaultMode');
     const defaultTone = Validation.getFormValue(formInputs, 'defaultTone');
+    const loggingEnabled = Validation.getFormValue(formInputs, 'loggingEnabled');
     
     const settings: Parameters<typeof State.saveSettings>[0] = {};
     if (apiKey !== undefined) {
@@ -302,6 +316,11 @@ function saveSettings(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Servi
     }
     if (defaultTone !== undefined) {
       settings.defaultTone = defaultTone as Types.EmailTone;
+    }
+    
+    // Save logging enabled separately
+    if (loggingEnabled !== undefined) {
+      Utils.setProperty(Config.PROPS.LOGGING_ENABLED, loggingEnabled === 'true' ? 'true' : 'false');
     }
     
     State.saveSettings(settings);
@@ -552,6 +571,45 @@ function useInComposeStandalone(event: Types.GmailAddOnEvent): GoogleAppsScript.
     
     return GmailUtils.buildFullDraftResponse(body, subject, to, cc);
   }, 'useInComposeStandalone')();
+}
+
+/**
+ * Generate draft for compose
+ */
+function generateForCompose(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const mode = Validation.getEmailMode(event.formInputs);
+    const tone = Validation.getEmailTone(event.formInputs);
+    const intent = event.formInputs?.intent?.[0] || '';
+    
+    if (!intent) {
+      return GmailUtils.buildDraftResponse('Please describe what you would like to say.');
+    }
+    
+    // Simple prompt for compose mode
+    const prompt = `Write an email with the following requirements:
+- Mode: ${mode}
+- Tone: ${tone}
+- Content: ${intent}
+
+Generate a complete email with an appropriate subject line.
+
+Respond with just the email content. Start with "Subject: [your subject]" on the first line, then a blank line, then the email body.`;
+    
+    const settings = State.getSettings();
+    if (!settings.apiKey) {
+      return GmailUtils.buildDraftResponse('Please configure your Gemini API key in settings.');
+    }
+    
+    const result = Gemini.callGenerateContent(settings.apiKey, prompt);
+    
+    if (result.code !== 200 || !result.text) {
+      return GmailUtils.buildDraftResponse(`Error: Failed to generate email (${result.code})`);
+    }
+    
+    // For compose, we get plain text response
+    return GmailUtils.buildDraftResponse(result.text);
+  }, 'generateForCompose')();
 }
 
 // ===== TEST FUNCTION =====
