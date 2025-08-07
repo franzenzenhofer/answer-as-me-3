@@ -4,13 +4,12 @@
  */
 namespace Contracts {
   /**
-   * Contract violation error
+   * Contract violation error - using function instead of class to avoid __extends
    */
-  export class ContractViolation extends Error {
-    constructor(message: string, public contractType: 'precondition' | 'postcondition' | 'invariant') {
-      super(`Contract violation (${contractType}): ${message}`);
-      this.name = 'ContractViolation';
-    }
+  export function ContractViolation(message: string, contractType: 'precondition' | 'postcondition' | 'invariant'): Error {
+    const error = new Error(`Contract violation (${contractType}): ${message}`);
+    error.name = 'ContractViolation';
+    return error;
   }
 
   /**
@@ -21,7 +20,7 @@ namespace Contracts {
    */
   export function requires(condition: boolean, message: string): void {
     if (!condition) {
-      throw new ContractViolation(message, 'precondition');
+      throw ContractViolation(message, 'precondition');
     }
   }
 
@@ -33,7 +32,7 @@ namespace Contracts {
    */
   export function ensures(condition: boolean, message: string): void {
     if (!condition) {
-      throw new ContractViolation(message, 'postcondition');
+      throw ContractViolation(message, 'postcondition');
     }
   }
 
@@ -45,7 +44,7 @@ namespace Contracts {
    */
   export function invariant(condition: boolean, message: string): void {
     if (!condition) {
-      throw new ContractViolation(message, 'invariant');
+      throw ContractViolation(message, 'invariant');
     }
   }
 
