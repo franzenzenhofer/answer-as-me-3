@@ -1,0 +1,7 @@
+# Ignore everything except the bundle and manifest
+**/**
+
+# Allow only these files
+!appsscript.json
+!Code.gs
+!.clasp.json

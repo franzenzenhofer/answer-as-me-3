@@ -137,6 +137,18 @@ function runValidation(options: DeployOptions): void {
     }
     throw new Error('Fix type issues with: npm run validate:types:fix');
   }
+  
+  // GAS-specific validation
+  try {
+    execCommand('npx tsx scripts/gas-linter.ts dist/Code.gs', { silent: !options.verbose });
+    log('  ✓ GAS linting passed', 'success');
+  } catch (error) {
+    log('  ✗ GAS compatibility issues detected', 'error');
+    if (!options.verbose) {
+      log('    Run with --verbose for details', 'info');
+    }
+    throw new Error('Fix GAS issues with: npm run validate:gas');
+  }
 }
 
 function runBuild(options: DeployOptions): void {
