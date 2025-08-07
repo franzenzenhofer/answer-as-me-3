@@ -116,7 +116,7 @@ namespace UI {
         createDecoratedText(
           error,
           'Please try again',
-          CardService.Icon.ERROR
+          CardService.Icon.NONE
         )
       )
     );

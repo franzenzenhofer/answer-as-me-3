@@ -45,7 +45,7 @@ namespace ErrorHandler {
       appError.details = error;
     }
     
-    Logger.error(`Error in ${context}: ${appError.message}`, appError);
+    AppLogger.error(`Error in ${context}: ${appError.message}`, appError);
     State.setLastError(appError.message);
     
     return appError;

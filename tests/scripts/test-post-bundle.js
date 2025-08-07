@@ -54,7 +54,7 @@ if (missingFunctions.length > 0) {
 }
 
 // Check for required namespaces
-const requiredNamespaces = ['Config', 'Logger', 'State', 'UI', 'ErrorHandler'];
+const requiredNamespaces = ['Config', 'AppLogger', 'State', 'UI', 'ErrorHandler'];
 const missingNamespaces = [];
 
 requiredNamespaces.forEach(ns => {

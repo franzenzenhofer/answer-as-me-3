@@ -11,9 +11,9 @@
  */
 
 // Entry point for the add-on
-function onHomepage(event?: any): GoogleAppsScript.Card_Service.Card {
+function onHomepage(_event?: any): GoogleAppsScript.Card_Service.Card {
   return ErrorHandler.wrapAsync(() => {
-    Logger.info('Homepage opened', { version: Config.VERSION });
+    AppLogger.info('Homepage opened', { version: Config.VERSION });
     
     // Load state
     State.loadFromProperties();
@@ -70,7 +70,7 @@ function onHomepage(event?: any): GoogleAppsScript.Card_Service.Card {
 // Action handler for generating greeting
 function generateGreeting(event: any): GoogleAppsScript.Card_Service.ActionResponse {
   return ErrorHandler.wrapAsync(() => {
-    Logger.info('Generating greeting', event);
+    AppLogger.info('Generating greeting', event);
     
     const formInputs = event.formInputs;
     const userName = formInputs?.userName?.[0] || 'World';
@@ -107,13 +107,13 @@ function createPersonalizedGreeting(name: string): string {
   ];
   
   const randomIndex = Math.floor(Math.random() * greetings.length);
-  return greetings[randomIndex];
+  return greetings[randomIndex]!;
 }
 
 // Settings action
-function showSettings(event: any): GoogleAppsScript.Card_Service.Card {
+function showSettings(_event: any): GoogleAppsScript.Card_Service.Card {
   return ErrorHandler.wrapAsync(() => {
-    Logger.info('Settings opened');
+    AppLogger.info('Settings opened');
     
     const header = UI.createHeader('Settings', Config.APP_NAME);
     
@@ -140,7 +140,7 @@ function showSettings(event: any): GoogleAppsScript.Card_Service.Card {
 // Reset data action
 function resetData(event: any): GoogleAppsScript.Card_Service.ActionResponse {
   return ErrorHandler.wrapAsync(() => {
-    Logger.info('Resetting data');
+    AppLogger.info('Resetting data');
     
     State.reset();
     
@@ -156,14 +156,15 @@ function resetData(event: any): GoogleAppsScript.Card_Service.ActionResponse {
 
 // Universal action handlers
 function showSettingsUniversal(): GoogleAppsScript.Card_Service.UniversalActionResponse {
+  const settingsCard = showSettings({});
   return CardService.newUniversalActionResponseBuilder()
-    .displayAddOnCards([showSettings({})])
+    .displayAddOnCards([settingsCard] as any)
     .build();
 }
 
 // Test function for development
 function testAddon(): void {
-  Logger.info('Testing add-on');
+  AppLogger.info('Testing add-on');
   const card = onHomepage();
-  Logger.info('Card created successfully', card);
+  AppLogger.info('Card created successfully', card);
 }

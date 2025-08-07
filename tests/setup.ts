@@ -3,7 +3,7 @@
  */
 
 // Mock Google Apps Script globals
-global.PropertiesService = {
+(global as any).PropertiesService = {
   getUserProperties: jest.fn(() => ({
     getProperty: jest.fn(),
     setProperty: jest.fn(),
@@ -18,7 +18,7 @@ global.PropertiesService = {
   }))
 } as any;
 
-global.CardService = {
+(global as any).CardService = {
   newCardBuilder: jest.fn(() => ({
     setHeader: jest.fn().mockReturnThis(),
     addSection: jest.fn().mockReturnThis(),
@@ -78,7 +78,7 @@ global.CardService = {
 } as any;
 
 // Mock console methods
-global.console = {
+(global as any).console = {
   ...console,
   log: jest.fn(),
   info: jest.fn(),

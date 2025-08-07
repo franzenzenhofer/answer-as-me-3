@@ -53,7 +53,7 @@ namespace State {
   
   export function setLastError(error: string): void {
     currentState.lastError = error;
-    Logger.error('State error recorded', error);
+    AppLogger.error('State error recorded', error);
   }
   
   export function setApiKey(key: string): void {
@@ -70,10 +70,10 @@ namespace State {
       if (stored) {
         const parsed = JSON.parse(stored);
         currentState = { ...currentState, ...parsed };
-        Logger.info('State loaded from properties', currentState);
+        AppLogger.info('State loaded from properties', currentState);
       }
     } catch (error) {
-      Logger.error('Failed to load state from properties', error);
+      AppLogger.error('Failed to load state from properties', error);
     }
   }
   
@@ -81,9 +81,9 @@ namespace State {
     try {
       const userProperties = PropertiesService.getUserProperties();
       userProperties.setProperty('appState', JSON.stringify(currentState));
-      Logger.debug('State saved to properties');
+      AppLogger.debug('State saved to properties');
     } catch (error) {
-      Logger.error('Failed to save state to properties', error);
+      AppLogger.error('Failed to save state to properties', error);
     }
   }
   
@@ -91,6 +91,6 @@ namespace State {
     currentState = { greetingCount: 0 };
     const userProperties = PropertiesService.getUserProperties();
     userProperties.deleteProperty('appState');
-    Logger.info('State reset');
+    AppLogger.info('State reset');
   }
 }

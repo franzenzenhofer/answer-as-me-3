@@ -27,7 +27,7 @@ function analyzeDependencies(modulesDir) {
   // Map of namespace names to module files
   const namespaceToModule = {
     'Config': 'config',
-    'Logger': 'logger',
+    'AppLogger': 'logger',
     'State': 'state',
     'ErrorHandler': 'error-handler',
     'UI': 'ui'

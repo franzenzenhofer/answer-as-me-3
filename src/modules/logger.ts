@@ -1,7 +1,7 @@
 /**
  * Logger module for structured logging
  */
-namespace Logger {
+namespace AppLogger {
   export enum LogLevel {
     DEBUG = 0,
     INFO = 1,
