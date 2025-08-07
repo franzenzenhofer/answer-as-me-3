@@ -1,6 +1,6 @@
 {
   "name": "answer-as-me-3",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Modular Hello World Google Apps Script Add-on with TypeScript",
   "main": "dist/Code.gs",
   "scripts": {
