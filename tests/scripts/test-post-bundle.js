@@ -33,10 +33,11 @@ if (bundleSize < 5000) {
 // Check for required entry points
 const requiredFunctions = [
   'onHomepage',
-  'generateGreeting',
-  'showSettings',
-  'resetData',
-  'showSettingsUniversal',
+  'onSettings',
+  'onGmailMessage',
+  'onComposeAction',
+  'generateReply',
+  'generateWithIntent',
   'testAddon'
 ];
 

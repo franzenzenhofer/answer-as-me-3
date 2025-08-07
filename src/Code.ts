@@ -25,11 +25,10 @@
 /**
  * Homepage trigger
  */
-function onHomepage(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
+function onHomepage(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
   return ErrorHandler.wrapWithErrorHandling(() => {
     AppLogger.info('Homepage opened', { version: Config.VERSION });
     
-    const settings = State.getSettings();
     const missing = State.getMissingRequirements();
     
     if (missing.length > 0) {
@@ -43,7 +42,7 @@ function onHomepage(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Servic
 /**
  * Settings universal action
  */
-function onSettings(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
+function onSettings(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
   return ErrorHandler.wrapWithErrorHandling(() => {
     AppLogger.info('Settings opened');
     return buildSettingsCard();
@@ -75,7 +74,7 @@ function onGmailMessage(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Se
 /**
  * Compose trigger
  */
-function onComposeAction(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
+function onComposeAction(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
   return ErrorHandler.wrapWithErrorHandling(() => {
     AppLogger.info('Compose action triggered');
     return buildSettingsCard();
@@ -145,7 +144,7 @@ function buildSettingsCard(banner?: string): GoogleAppsScript.Card_Service.Card 
 /**
  * Build detail card for email thread
  */
-function buildDetailCard(event?: Types.GmailAddOnEvent, banner?: string): GoogleAppsScript.Card_Service.Card {
+function buildDetailCard(_event?: Types.GmailAddOnEvent, banner?: string): GoogleAppsScript.Card_Service.Card {
   const settings = State.getSettings();
   const sections: GoogleAppsScript.Card_Service.CardSection[] = [];
   
@@ -255,11 +254,16 @@ function saveSettings(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Servi
   return ErrorHandler.wrapWithErrorHandling(() => {
     const formInputs = event.formInputs || {};
     
-    State.saveSettings({
-      apiKey: Validation.getFormValue(formInputs, 'apiKey'),
-      defaultMode: Validation.getFormValue(formInputs, 'defaultMode') as Types.EmailMode,
-      defaultTone: Validation.getFormValue(formInputs, 'defaultTone') as Types.EmailTone
-    });
+    const apiKey = Validation.getFormValue(formInputs, 'apiKey');
+    const defaultMode = Validation.getFormValue(formInputs, 'defaultMode');
+    const defaultTone = Validation.getFormValue(formInputs, 'defaultTone');
+    
+    const settings: Parameters<typeof State.saveSettings>[0] = {};
+    if (apiKey !== undefined) settings.apiKey = apiKey;
+    if (defaultMode !== undefined) settings.defaultMode = defaultMode as Types.EmailMode;
+    if (defaultTone !== undefined) settings.defaultTone = defaultTone as Types.EmailTone;
+    
+    State.saveSettings(settings);
     
     return UI.createActionResponse(
       UI.createNotification('Settings saved'),
@@ -271,13 +275,13 @@ function saveSettings(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Servi
 /**
  * Test API key action
  */
-function testApiKey(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+function testApiKey(_event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
   return ErrorHandler.wrapWithErrorHandling(() => {
     const apiKey = Validation.ensureApiKey();
     
     const result = Gemini.callGenerateContent(apiKey, 'Return {"ping":true} as JSON only.');
     const parsed = Gemini.parseResponse(result.text);
-    const success = result.code === 200 && parsed && 'ping' in parsed;
+    const success = result.code === 200 && parsed !== null && 'ping' in parsed;
     
     AppLogger.logApiKeyTest(success, result, Gemini.getSafetyRatings(result.text));
     
@@ -290,9 +294,9 @@ function testApiKey(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service
 /**
  * Open or create prompt document
  */
-function openOrCreatePromptDoc(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+function openOrCreatePromptDoc(_event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
   return ErrorHandler.wrapWithErrorHandling(() => {
-    const doc = Document.getOrCreatePromptDoc();
+    Document.getOrCreatePromptDoc();
     const url = Document.getPromptDocUrl();
     
     return CardService.newActionResponseBuilder()
@@ -306,13 +310,13 @@ function openOrCreatePromptDoc(event: Types.GmailAddOnEvent): GoogleAppsScript.C
 /**
  * Open or create logs folder
  */
-function openOrCreateLogsFolder(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+function openOrCreateLogsFolder(_event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
   return ErrorHandler.wrapWithErrorHandling(() => {
-    const folder = Drive.getOrCreateLogsFolder();
-    const url = Drive.getLogsFolderUrl();
+    DriveUtils.getOrCreateLogsFolder();
+    const url = DriveUtils.getLogsFolderUrl();
     
     // Ensure today's sheet exists
-    Sheets.getTodaySheet();
+    SheetsUtils.getTodaySheet();
     
     return CardService.newActionResponseBuilder()
       .setOpenLink(CardService.newOpenLink()
@@ -325,9 +329,9 @@ function openOrCreateLogsFolder(event: Types.GmailAddOnEvent): GoogleAppsScript.
 /**
  * Open today's log sheet
  */
-function openTodayLog(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+function openTodayLog(_event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
   return ErrorHandler.wrapWithErrorHandling(() => {
-    const url = Sheets.getTodaySheetUrl();
+    const url = SheetsUtils.getTodaySheetUrl();
     
     return CardService.newActionResponseBuilder()
       .setOpenLink(CardService.newOpenLink()
@@ -340,7 +344,7 @@ function openTodayLog(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Servi
 /**
  * Factory reset
  */
-function factoryReset(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+function factoryReset(_event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
   return ErrorHandler.wrapWithErrorHandling(() => {
     State.clearAllSettings();
     
@@ -380,10 +384,10 @@ function doGenerate(
     const validEvent = Validation.validateGmailEvent(event);
     
     // Get message and thread
-    const message = Gmail.getMessageById(validEvent.gmail!.messageId!, validEvent.gmail!.accessToken!);
-    const thread = Gmail.getThreadFromMessage(message);
-    const metadata = Gmail.getMessageMetadata(message);
-    const threadMetadata = Gmail.getThreadMetadata(thread);
+    const message = GmailUtils.getMessageById(validEvent.gmail!.messageId!, validEvent.gmail!.accessToken!);
+    const thread = GmailUtils.getThreadFromMessage(message);
+    const metadata = GmailUtils.getMessageMetadata(message);
+    const threadMetadata = GmailUtils.getThreadMetadata(thread);
     
     // Get mode and tone
     const mode = Validation.getEmailMode(validEvent.formInputs);
@@ -422,7 +426,7 @@ function doGenerate(
       subject: threadMetadata.firstSubject,
       recipients,
       success: geminiResult.success,
-      error: geminiResult.error,
+      ...(geminiResult.error && { error: geminiResult.error }),
       apiResult: geminiResult.apiResult,
       safetyInfo: geminiResult.safetyInfo,
       truncated,
@@ -459,51 +463,51 @@ function doGenerate(
 /**
  * Compose reply in thread
  */
-function composeReplyInThread(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
+function composeReplyInThread(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
   return ErrorHandler.wrapWithErrorHandling(() => {
     const validEvent = Validation.validateGmailEvent(event);
-    Gmail.setAccessToken(validEvent.gmail!.accessToken!);
+    GmailUtils.setAccessToken(validEvent.gmail!.accessToken!);
     
     const body = event.parameters?.body || '';
-    return Gmail.buildDraftResponse(body);
+    return GmailUtils.buildDraftResponse(body);
   }, 'composeReplyInThread')();
 }
 
 /**
  * Compose reply all in thread
  */
-function composeReplyAllInThread(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
+function composeReplyAllInThread(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
   return ErrorHandler.wrapWithErrorHandling(() => {
     const validEvent = Validation.validateGmailEvent(event);
-    const message = Gmail.getMessageById(validEvent.gmail!.messageId!, validEvent.gmail!.accessToken!);
-    const thread = Gmail.getThreadFromMessage(message);
+    const message = GmailUtils.getMessageById(validEvent.gmail!.messageId!, validEvent.gmail!.accessToken!);
+    const thread = GmailUtils.getThreadFromMessage(message);
     
     const recipients = Email.computeRecipients(thread, 'ReplyAll');
     const body = event.parameters?.body || '';
     
-    return Gmail.buildDraftResponseWithRecipients(body, recipients.to, recipients.cc);
+    return GmailUtils.buildDraftResponseWithRecipients(body, recipients.to, recipients.cc);
   }, 'composeReplyAllInThread')();
 }
 
 /**
  * Compose forward in thread
  */
-function composeForwardInThread(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
+function composeForwardInThread(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
   return ErrorHandler.wrapWithErrorHandling(() => {
     const validEvent = Validation.validateGmailEvent(event);
-    Gmail.setAccessToken(validEvent.gmail!.accessToken!);
+    GmailUtils.setAccessToken(validEvent.gmail!.accessToken!);
     
     const body = event.parameters?.body || '';
     const subject = event.parameters?.subject || '';
     
-    return Gmail.buildDraftResponseWithSubject(body, subject);
+    return GmailUtils.buildDraftResponseWithSubject(body, subject);
   }, 'composeForwardInThread')();
 }
 
 /**
  * Use in standalone compose
  */
-function useInComposeStandalone(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
+function useInComposeStandalone(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
   return ErrorHandler.wrapWithErrorHandling(() => {
     const params = event.parameters || {};
     
@@ -518,7 +522,7 @@ function useInComposeStandalone(event: Types.GmailAddOnEvent): GoogleAppsScript.
       subject = `Re: ${subject.replace(/^Re:\s*/i, '').replace(/^Fwd:\s*/i, '')}`;
     }
     
-    return Gmail.buildFullDraftResponse(body, subject, to, cc);
+    return GmailUtils.buildFullDraftResponse(body, subject, to, cc);
   }, 'useInComposeStandalone')();
 }
 
@@ -531,7 +535,7 @@ function testAddon(): void {
   AppLogger.info('Testing add-on', { version: Config.VERSION });
   
   try {
-    const card = onHomepage();
+    onHomepage();
     AppLogger.info('Homepage card created successfully');
     
     const settings = State.getSettings();

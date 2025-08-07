@@ -55,8 +55,8 @@ namespace AppLogger {
     action: string,
     data: Partial<Types.LogEntry>
   ): void {
-    const entry = Sheets.formatLogEntry(action, data);
-    Sheets.writeLogEntry(entry);
+    const entry = SheetsUtils.formatLogEntry(action, data);
+    SheetsUtils.writeLogEntry(entry);
   }
   
   /**
@@ -67,9 +67,9 @@ namespace AppLogger {
     result: Types.GeminiCallResult,
     safetyInfo?: any
   ): void {
-    const requestUrl = Drive.createJsonFile('testkey-request', result.requestPayload);
+    const requestUrl = DriveUtils.createJsonFile('testkey-request', result.requestPayload);
     const responseData = Utils.jsonParse(result.text) || { raw: result.text };
-    const responseUrl = Drive.createJsonFile('testkey-response', responseData);
+    const responseUrl = DriveUtils.createJsonFile('testkey-response', responseData);
     
     logAction('TestKey', {
       Success: success,
@@ -105,9 +105,9 @@ namespace AppLogger {
       messageId: string;
     }
   ): void {
-    const requestUrl = Drive.createJsonFile('generate-request', params.apiResult.requestPayload);
+    const requestUrl = DriveUtils.createJsonFile('generate-request', params.apiResult.requestPayload);
     const responseData = Utils.jsonParse(params.apiResult.text) || { raw: params.apiResult.text };
-    const responseUrl = Drive.createJsonFile('generate-response', responseData);
+    const responseUrl = DriveUtils.createJsonFile('generate-response', responseData);
     
     logAction('Generate', {
       Mode: params.mode,

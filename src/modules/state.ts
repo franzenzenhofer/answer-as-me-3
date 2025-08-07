@@ -43,7 +43,7 @@ namespace State {
         Utils.getProperty(Config.PROPS.DEFAULT_TONE, Config.DEFAULTS.TONE)
       ),
       hasPromptDoc: Document.promptDocExists(),
-      hasLogsFolder: Drive.logsFolderExists()
+      hasLogsFolder: DriveUtils.logsFolderExists()
     };
   }
   

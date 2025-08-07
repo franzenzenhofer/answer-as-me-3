@@ -1,7 +1,7 @@
 /**
  * Drive module for Answer As Me 3
  */
-namespace Drive {
+namespace DriveUtils {
   /**
    * Get or create logs folder
    */

@@ -1,7 +1,7 @@
 /**
  * Sheets module for Answer As Me 3
  */
-namespace Sheets {
+namespace SheetsUtils {
   /**
    * Get or create today's log sheet
    */
@@ -21,8 +21,8 @@ namespace Sheets {
     
     // Look for existing sheet or create new one
     const sheetName = Config.LOGS.SHEET_PREFIX + today;
-    const folder = Drive.getLogsFolder();
-    const existingFile = Drive.getFileByNameInFolder(folder, sheetName);
+    const folder = DriveUtils.getLogsFolder();
+    const existingFile = DriveUtils.getFileByNameInFolder(folder, sheetName);
     
     let spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
     

@@ -82,6 +82,10 @@ namespace Email {
     }
     
     const lastMessage = messages[messages.length - 1];
+    if (!lastMessage) {
+      return { to: [], cc: [] };
+    }
+    
     const to = extractEmailAddresses(lastMessage.getTo());
     const cc = extractEmailAddresses(lastMessage.getCc());
     const from = extractEmailAddresses(lastMessage.getFrom());

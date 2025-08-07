@@ -1,7 +1,7 @@
 /**
  * Gmail module for Answer As Me 3
  */
-namespace Gmail {
+namespace GmailUtils {
   /**
    * Set Gmail access token for current session
    */
@@ -32,63 +32,70 @@ namespace Gmail {
   }
   
   /**
-   * Create draft reply builder
+   * Build update draft action response
    */
-  export function createDraftReplyBuilder(): GoogleAppsScript.Card_Service.GmailDraftActionResponseBuilder {
-    return CardService.newGmailDraftActionResponseBuilder();
-  }
-  
-  /**
-   * Build draft response with body
-   */
-  export function buildDraftResponse(body: string): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
-    return createDraftReplyBuilder()
-      .setDraftBody(body)
+  export function buildDraftResponse(body: string): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
+    return CardService.newUpdateDraftActionResponseBuilder()
+      .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
+        .addUpdateContent(body, CardService.ContentType.MUTABLE_HTML)
+        .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
       .build();
   }
   
   /**
-   * Build draft response with recipients
+   * Build update draft with recipients
    */
   export function buildDraftResponseWithRecipients(
     body: string,
     to: string[],
     cc: string[]
-  ): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
-    return createDraftReplyBuilder()
-      .setToRecipients(to.join(','))
-      .setCcRecipients(cc.join(','))
-      .setDraftBody(body)
+  ): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
+    return CardService.newUpdateDraftActionResponseBuilder()
+      .setUpdateDraftToRecipientsAction(CardService.newUpdateDraftToRecipientsAction()
+        .addUpdateToRecipients(to))
+      .setUpdateDraftCcRecipientsAction(CardService.newUpdateDraftCcRecipientsAction()
+        .addUpdateCcRecipients(cc))
+      .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
+        .addUpdateContent(body, CardService.ContentType.MUTABLE_HTML)
+        .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
       .build();
   }
   
   /**
-   * Build draft response with subject
+   * Build update draft with subject
    */
   export function buildDraftResponseWithSubject(
     body: string,
     subject: string
-  ): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
-    return createDraftReplyBuilder()
-      .setSubject(subject)
-      .setDraftBody(body)
+  ): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
+    return CardService.newUpdateDraftActionResponseBuilder()
+      .setUpdateDraftSubjectAction(CardService.newUpdateDraftSubjectAction()
+        .addUpdateSubject(subject))
+      .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
+        .addUpdateContent(body, CardService.ContentType.MUTABLE_HTML)
+        .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
       .build();
   }
   
   /**
-   * Build full draft response
+   * Build full update draft response
    */
   export function buildFullDraftResponse(
     body: string,
     subject: string,
     to: string[],
     cc: string[]
-  ): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
-    return createDraftReplyBuilder()
-      .setToRecipients(to.join(','))
-      .setCcRecipients(cc.join(','))
-      .setSubject(subject)
-      .setDraftBody(body)
+  ): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
+    return CardService.newUpdateDraftActionResponseBuilder()
+      .setUpdateDraftToRecipientsAction(CardService.newUpdateDraftToRecipientsAction()
+        .addUpdateToRecipients(to))
+      .setUpdateDraftCcRecipientsAction(CardService.newUpdateDraftCcRecipientsAction()
+        .addUpdateCcRecipients(cc))
+      .setUpdateDraftSubjectAction(CardService.newUpdateDraftSubjectAction()
+        .addUpdateSubject(subject))
+      .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
+        .addUpdateContent(body, CardService.ContentType.MUTABLE_HTML)
+        .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
       .build();
   }
   
@@ -100,15 +107,16 @@ namespace Gmail {
     to: string;
     cc: string;
     subject: string;
-    date: Date | null;
+    date: string;
     id: string;
   } {
+    const messageDate = message.getDate();
     return {
       from: message.getFrom() || '',
       to: message.getTo() || '',
       cc: message.getCc() || '',
       subject: message.getSubject() || '',
-      date: message.getDate(),
+      date: messageDate ? messageDate.toString() : '',
       id: message.getId()
     };
   }
@@ -123,11 +131,12 @@ namespace Gmail {
     lastSubject: string;
   } {
     const messages = thread.getMessages();
+    const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
     return {
       id: thread.getId(),
       messageCount: messages.length,
       firstSubject: thread.getFirstMessageSubject() || '',
-      lastSubject: messages.length > 0 ? messages[messages.length - 1].getSubject() || '' : ''
+      lastSubject: lastMessage ? lastMessage.getSubject() || '' : ''
     };
   }
 }

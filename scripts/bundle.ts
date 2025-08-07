@@ -63,11 +63,11 @@ const NAMESPACE_MAP: Record<string, string> = {
   'Validation': 'validation',
   'Template': 'template',
   'Email': 'email',
-  'Gmail': 'gmail',
+  'GmailUtils': 'gmail',
   'Gemini': 'gemini',
   'Document': 'document',
-  'Drive': 'drive',
-  'Sheets': 'sheets',
+  'DriveUtils': 'drive',
+  'SheetsUtils': 'sheets',
   'AppLogger': 'logger',
   'State': 'state',
   'ErrorHandler': 'error-handler',
@@ -372,6 +372,15 @@ async function createBundle(options: BundleOptions = { treeShake: true, analyze:
   for (const moduleName of moduleOrder) {
     const jsPath = path.join(modulesDir, `${moduleName}.js`);
     const moduleContent = fs.readFileSync(jsPath, 'utf8');
+    
+    // Skip types module if it's empty (only contains type definitions)
+    if (moduleName === 'types' && moduleContent.trim().includes('//# sourceMappingURL=types.js.map')) {
+      // Create an empty Types namespace for type checking
+      modulesContent += `\n// ===== TYPES MODULE =====\n`;
+      modulesContent += `var Types;\n(function (Types) {\n})(Types || (Types = {}));\n`;
+      log(`✅ Included module: types (Types) - empty namespace for type definitions`, 'success');
+      continue;
+    }
     
     const extracted = extractNamespaceContent(moduleContent, moduleName);
     if (!extracted) {
