@@ -41,6 +41,8 @@ const CORE_MODULES = [
   'config',
   'types',
   'utils',
+  'algorithms',
+  'cs-utils',
   'validation',
   'template',
   'email',
@@ -61,6 +63,8 @@ const NAMESPACE_MAP: Record<string, string> = {
   'Config': 'config',
   'Types': 'types',
   'Utils': 'utils',
+  'Algorithms': 'algorithms',
+  'CSUtils': 'cs-utils',
   'Validation': 'validation',
   'Template': 'template',
   'Email': 'email',
@@ -72,7 +76,8 @@ const NAMESPACE_MAP: Record<string, string> = {
   'AppLogger': 'logger',
   'State': 'state',
   'ErrorHandler': 'error-handler',
-  'UI': 'ui'
+  'UI': 'ui',
+  'Generation': 'generation'
 };
 
 // Logging utilities

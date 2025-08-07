@@ -14,9 +14,14 @@ namespace Gemini {
         const response = UrlFetchApp.fetch(url, options);
         const code = response.getResponseCode();
         
-        // Retry on 5xx errors
+        // Retry on 5xx errors with exponential backoff and jitter
         if (code >= 500 && code < 600 && attempt < maxAttempts - 1) {
-          Utils.sleep(Config.GEMINI.RETRY_BACKOFF_MS * (attempt + 1));
+          const backoffMs = Algorithms.calculateBackoffWithJitter(
+            attempt,
+            Config.GEMINI.RETRY_BACKOFF_MS,
+            10000 // 10 second max
+          );
+          Utils.sleep(backoffMs);
           continue;
         }
         
@@ -24,7 +29,12 @@ namespace Gemini {
       } catch (error) {
         lastError = error as Error;
         if (attempt < maxAttempts - 1) {
-          Utils.sleep(Config.GEMINI.RETRY_BACKOFF_MS * (attempt + 1));
+          const backoffMs = Algorithms.calculateBackoffWithJitter(
+            attempt,
+            Config.GEMINI.RETRY_BACKOFF_MS,
+            10000 // 10 second max
+          );
+          Utils.sleep(backoffMs);
         }
       }
     }

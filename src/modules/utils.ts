@@ -81,6 +81,8 @@ namespace Utils {
   
   /**
    * Check if value is in array
+   * @complexity O(n) - Consider using Algorithms.FastSet for O(1) lookups
+   * @deprecated Use Algorithms.FastSet for better performance
    */
   export function isInArray<T>(array: readonly T[], value: T): boolean {
     return array.indexOf(value) > -1;
