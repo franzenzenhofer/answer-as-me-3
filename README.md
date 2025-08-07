@@ -2,6 +2,15 @@
 
 A modular Hello World Google Apps Script Gmail add-on built with TypeScript.
 
+## Recent Updates (v1.2.0)
+
+- ✅ **Computer Science Excellence**: Formal contracts, advanced algorithms, circuit breaker pattern
+- ✅ **GAS Validation Tools**: Custom linter and bundle validator for deployment safety  
+- ✅ **Clean Deployment**: Only 2 files deployed (Code.gs + appsscript.json)
+- ✅ **ES2022 Support**: Modern JavaScript features with GAS compatibility
+
+See [CHANGELOG.md](CHANGELOG.md) for full details.
+
 ## Features
 
 - **Modular TypeScript Architecture**: Clean separation of concerns with dedicated modules
@@ -11,6 +20,7 @@ A modular Hello World Google Apps Script Gmail add-on built with TypeScript.
 - **Automated Deployment**: Single command deployment with version management
 - **Testing Infrastructure**: Jest tests with Google Apps Script mocks
 - **CI/CD Pipeline**: GitHub Actions for automated testing and builds
+- **GAS Validation**: Custom linting and bundle validation tools
 
 ## Architecture
 
@@ -21,6 +31,9 @@ The project follows a modular architecture with these core modules:
 - **State**: State management with persistence
 - **UI**: CardService UI component builders
 - **ErrorHandler**: Comprehensive error handling
+- **Contracts**: Formal verification with pre/post conditions
+- **Algorithms**: Advanced data structures (Bloom filter, LRU, Trie)
+- **CS Utils**: Circuit breaker and other patterns
 
 ## Configuration
 
