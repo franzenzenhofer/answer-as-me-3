@@ -1,170 +1,542 @@
 /// <reference path="modules/config.ts" />
+/// <reference path="modules/types.ts" />
+/// <reference path="modules/utils.ts" />
+/// <reference path="modules/validation.ts" />
+/// <reference path="modules/template.ts" />
+/// <reference path="modules/email.ts" />
+/// <reference path="modules/gmail.ts" />
+/// <reference path="modules/gemini.ts" />
+/// <reference path="modules/document.ts" />
+/// <reference path="modules/drive.ts" />
+/// <reference path="modules/sheets.ts" />
 /// <reference path="modules/logger.ts" />
 /// <reference path="modules/state.ts" />
 /// <reference path="modules/ui.ts" />
 /// <reference path="modules/error-handler.ts" />
 
 /**
- * Answer As Me 3 - Modular Hello World Google Apps Script Add-on
+ * Answer As Me 3 - AI-Powered Gmail Add-on
  * 
  * Entry point for the Gmail add-on
  */
 
-// Entry point for the add-on
-function onHomepage(_event?: any): GoogleAppsScript.Card_Service.Card {
-  return ErrorHandler.wrapAsync(() => {
+// ===== ENTRY POINTS =====
+
+/**
+ * Homepage trigger
+ */
+function onHomepage(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
+  return ErrorHandler.wrapWithErrorHandling(() => {
     AppLogger.info('Homepage opened', { version: Config.VERSION });
     
-    // Load state
-    State.loadFromProperties();
+    const settings = State.getSettings();
+    const missing = State.getMissingRequirements();
     
-    const userName = State.getUserName();
-    const greetingCount = State.getGreetingCount();
-    
-    // Build UI
-    const header = UI.createHeader(
-      Config.APP_NAME,
-      `Version ${Config.VERSION}`
-    );
-    
-    const nameInput = UI.createTextInput(
-      'userName',
-      'Your Name',
-      'Enter your name for a personalized greeting',
-      userName
-    );
-    
-    const greetButton = UI.createButton(
-      'Say Hello',
-      'generateGreeting'
-    );
-    
-    const statsText = UI.createDecoratedText(
-      `Greetings generated: ${greetingCount}`,
-      'Total count',
-      CardService.Icon.STAR
-    );
-    
-    const mainSection = UI.createSection(
-      UI.createTextParagraph('Welcome to the modular Hello World add-on!'),
-      nameInput,
-      greetButton,
-      statsText
-    );
-    
-    // Add last greeting if available
-    const sections = [mainSection];
-    const lastGreeting = State.getLastGreeting();
-    if (lastGreeting) {
-      const greetingSection = UI.createSection(
-        UI.createTextParagraph('<b>Last Greeting:</b>'),
-        UI.createTextParagraph(lastGreeting)
-      );
-      sections.push(greetingSection);
+    if (missing.length > 0) {
+      return buildSettingsCard(`Setup required: ${missing.join(', ')}`);
     }
     
-    return UI.createCard(header, ...sections);
+    return buildSettingsCard();
   }, 'onHomepage')();
 }
 
-// Action handler for generating greeting
-function generateGreeting(event: any): GoogleAppsScript.Card_Service.ActionResponse {
-  return ErrorHandler.wrapAsync(() => {
-    AppLogger.info('Generating greeting', event);
-    
-    const formInputs = event.formInputs;
-    const userName = formInputs?.userName?.[0] || 'World';
-    
-    // Update state
-    State.setUserName(userName);
-    State.incrementGreetingCount();
-    
-    // Generate greeting
-    const greeting = createPersonalizedGreeting(userName);
-    State.setLastGreeting(greeting);
-    
-    // Show notification
-    const notification = UI.createNotification(greeting);
-    
-    // Rebuild the card to show updated state
-    const updatedCard = onHomepage(event);
-    
-    return CardService.newActionResponseBuilder()
-      .setNotification(notification)
-      .setNavigation(CardService.newNavigation().updateCard(updatedCard))
-      .build();
-  }, 'generateGreeting')();
-}
-
-// Helper function to create personalized greetings
-function createPersonalizedGreeting(name: string): string {
-  const greetings = [
-    `${Config.SETTINGS.DEFAULT_GREETING}, ${name}!`,
-    `Hey ${name}, nice to see you!`,
-    `Greetings, ${name}! Hope you're having a great day!`,
-    `Welcome back, ${name}!`,
-    `Hi ${name}! Thanks for using ${Config.APP_NAME}!`
-  ];
-  
-  const randomIndex = Math.floor(Math.random() * greetings.length);
-  return greetings[randomIndex]!;
-}
-
-// Settings action
-function showSettings(_event: any): GoogleAppsScript.Card_Service.Card {
-  return ErrorHandler.wrapAsync(() => {
+/**
+ * Settings universal action
+ */
+function onSettings(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
+  return ErrorHandler.wrapWithErrorHandling(() => {
     AppLogger.info('Settings opened');
-    
-    const header = UI.createHeader('Settings', Config.APP_NAME);
-    
-    const resetButton = UI.createButton(
-      'Reset All Data',
-      'resetData'
-    );
-    
-    const backButton = UI.createButton(
-      'Back to Home',
-      'onHomepage'
-    );
-    
-    const section = UI.createSection(
-      UI.createTextParagraph('Manage your add-on settings'),
-      resetButton,
-      backButton
-    );
-    
-    return UI.createCard(header, section);
-  }, 'showSettings')();
+    return buildSettingsCard();
+  }, 'onSettings')();
 }
 
-// Reset data action
-function resetData(event: any): GoogleAppsScript.Card_Service.ActionResponse {
-  return ErrorHandler.wrapAsync(() => {
-    AppLogger.info('Resetting data');
+/**
+ * Gmail message contextual trigger
+ */
+function onGmailMessage(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    AppLogger.info('Gmail message opened');
     
-    State.reset();
+    // Check requirements
+    const missing = State.getMissingRequirements();
+    if (missing.length > 0) {
+      return buildSettingsCard(`Setup required: ${missing.join(', ')}`);
+    }
     
-    const notification = UI.createNotification('All data has been reset');
-    const homeCard = onHomepage(event);
+    // Validate event
+    if (!event || !event.gmail || !event.gmail.messageId) {
+      return buildDetailCard(undefined, 'Open an email to generate replies');
+    }
+    
+    return buildDetailCard(event);
+  }, 'onGmailMessage')();
+}
+
+/**
+ * Compose trigger
+ */
+function onComposeAction(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    AppLogger.info('Compose action triggered');
+    return buildSettingsCard();
+  }, 'onComposeAction')();
+}
+
+// ===== CARD BUILDERS =====
+
+/**
+ * Build settings card
+ */
+function buildSettingsCard(banner?: string): GoogleAppsScript.Card_Service.Card {
+  const settings = State.getSettings();
+  const sections: GoogleAppsScript.Card_Service.CardSection[] = [];
+  
+  // Banner section
+  if (banner) {
+    sections.push(UI.createSection(
+      UI.createTextParagraph(`⚠️ ${banner}`)
+    ));
+  }
+  
+  // API section
+  sections.push(UI.createSectionWithHeader('API Configuration',
+    UI.createTextInput('apiKey', 'Gemini API Key', settings.apiKey),
+    UI.createButtonSet([
+      UI.createButton('Save', 'saveSettings'),
+      UI.createButton('Test Key', 'testApiKey'),
+      UI.createOpenLinkButton('Get API Key', 'https://makersuite.google.com/app/apikey')
+    ])
+  ));
+  
+  // Defaults section
+  sections.push(UI.createSectionWithHeader('Default Settings',
+    UI.createDropdown('defaultMode', 'Default Mode', Config.EMAIL.MODES, settings.defaultMode),
+    UI.createDropdown('defaultTone', 'Default Tone', Config.EMAIL.TONES, settings.defaultTone),
+    UI.createButton('Save All', 'saveSettings')
+  ));
+  
+  // Prompt Doc section
+  sections.push(UI.createSectionWithHeader('Prompt Document (Required)',
+    UI.createTextParagraph('Controls AI behavior and response format'),
+    UI.createButton('Create/Open Prompt Doc', 'openOrCreatePromptDoc')
+  ));
+  
+  // Logs section
+  sections.push(UI.createSectionWithHeader('Logs & Analytics',
+    UI.createTextParagraph('Daily activity logs and API usage tracking'),
+    UI.createButtonSet([
+      UI.createButton('Create/Open Logs Folder', 'openOrCreateLogsFolder'),
+      UI.createButton("Open Today's Log", 'openTodayLog')
+    ])
+  ));
+  
+  // Danger Zone
+  sections.push(UI.createSectionWithHeader('Danger Zone',
+    UI.createTextParagraph('Factory reset removes all settings'),
+    UI.createButton('Factory Reset', 'factoryReset', {}, CardService.TextButtonStyle.FILLED)
+  ));
+  
+  return UI.createCard(
+    UI.createHeader(Config.APP_NAME, 'Settings & Configuration'),
+    ...sections
+  );
+}
+
+/**
+ * Build detail card for email thread
+ */
+function buildDetailCard(event?: Types.GmailAddOnEvent, banner?: string): GoogleAppsScript.Card_Service.Card {
+  const settings = State.getSettings();
+  const sections: GoogleAppsScript.Card_Service.CardSection[] = [];
+  
+  // Banner
+  if (banner) {
+    sections.push(UI.createSection(
+      UI.createTextParagraph(`⚠️ ${banner}`)
+    ));
+  }
+  
+  // Generation controls
+  sections.push(UI.createSection(
+    UI.createDropdown('mode', 'Mode', Config.EMAIL.MODES, settings.defaultMode),
+    UI.createDropdown('tone', 'Tone', Config.EMAIL.TONES, settings.defaultTone),
+    UI.createButton('Generate Reply', 'generateReply', {}, CardService.TextButtonStyle.FILLED)
+  ));
+  
+  // Fast actions
+  const intentButtons = Config.EMAIL.INTENTS.map(intent => 
+    UI.createButton(intent, 'generateWithIntent', { intent })
+  );
+  
+  sections.push(UI.createSectionWithHeader('Quick Actions',
+    UI.createButtonSet(intentButtons),
+    UI.createTextParagraph('Note: Long threads may be truncated for reliability.')
+  ));
+  
+  // Settings link
+  sections.push(UI.createSection(
+    UI.createButton('Settings', 'onSettings')
+  ));
+  
+  return UI.createCard(
+    UI.createHeader(Config.APP_NAME, 'Email Assistant'),
+    ...sections
+  );
+}
+
+/**
+ * Build preview card
+ */
+function buildPreviewCard(preview: Types.PreviewData): GoogleAppsScript.Card_Service.Card {
+  const sections: GoogleAppsScript.Card_Service.CardSection[] = [];
+  
+  // Metadata
+  const chips = `Mode: ${preview.mode} • Tone: ${preview.tone}${preview.intent ? ` • Intent: ${preview.intent}` : ''}${preview.truncated ? ' • Thread truncated' : ''}`;
+  sections.push(UI.createSection(
+    UI.createTextParagraph(chips)
+  ));
+  
+  if (!preview.safeToSend) {
+    sections.push(UI.createSection(
+      UI.createTextParagraph('⚠️ Model flagged this as potentially unsafe. Review carefully.')
+    ));
+  }
+  
+  // Recipients
+  sections.push(UI.createSectionWithHeader('Recipients',
+    UI.createKeyValue('To', preview.to.join(', ')),
+    ...(preview.cc.length > 0 ? [UI.createKeyValue('Cc', preview.cc.join(', '))] : [])
+  ));
+  
+  // Body preview
+  const bodyPreview = preview.body.length > Config.EMAIL.PREVIEW_CHARS
+    ? preview.body.substring(0, Config.EMAIL.PREVIEW_CHARS) + '…'
+    : preview.body;
+  
+  sections.push(UI.createSectionWithHeader('Message Preview',
+    UI.createTextParagraph(Utils.escapeHtml(bodyPreview))
+  ));
+  
+  // Actions
+  sections.push(UI.createSectionWithHeader('Compose Actions',
+    UI.createButtonSet([
+      UI.createButton('Reply in Thread', 'composeReplyInThread', 
+        { body: preview.body }, CardService.TextButtonStyle.FILLED),
+      UI.createButton('Reply All in Thread', 'composeReplyAllInThread', 
+        { body: preview.body }),
+      UI.createButton('Forward in Thread', 'composeForwardInThread', 
+        { body: preview.body, subject: preview.subject })
+    ]),
+    UI.createButtonSet([
+      UI.createButton('Use in Compose (New)', 'useInComposeStandalone', {
+        mode: preview.mode,
+        subject: preview.subject,
+        body: preview.body,
+        to: preview.to.join(','),
+        cc: preview.cc.join(',')
+      }),
+      UI.createButton('Back', 'onGmailMessage'),
+      UI.createButton('Settings', 'onSettings')
+    ])
+  ));
+  
+  return UI.createCard(
+    UI.createHeader('Preview', `${preview.mode} • ${preview.subject}`),
+    ...sections
+  );
+}
+
+// ===== ACTION HANDLERS =====
+
+/**
+ * Save settings action
+ */
+function saveSettings(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const formInputs = event.formInputs || {};
+    
+    State.saveSettings({
+      apiKey: Validation.getFormValue(formInputs, 'apiKey'),
+      defaultMode: Validation.getFormValue(formInputs, 'defaultMode') as Types.EmailMode,
+      defaultTone: Validation.getFormValue(formInputs, 'defaultTone') as Types.EmailTone
+    });
+    
+    return UI.createActionResponse(
+      UI.createNotification('Settings saved'),
+      UI.createUpdateNavigation(buildSettingsCard())
+    );
+  }, 'saveSettings')();
+}
+
+/**
+ * Test API key action
+ */
+function testApiKey(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const apiKey = Validation.ensureApiKey();
+    
+    const result = Gemini.callGenerateContent(apiKey, 'Return {"ping":true} as JSON only.');
+    const parsed = Gemini.parseResponse(result.text);
+    const success = result.code === 200 && parsed && 'ping' in parsed;
+    
+    AppLogger.logApiKeyTest(success, result, Gemini.getSafetyRatings(result.text));
+    
+    return UI.createActionResponse(
+      UI.createNotification(success ? '✅ API key is valid' : `❌ API key test failed: HTTP ${result.code}`)
+    );
+  }, 'testApiKey')();
+}
+
+/**
+ * Open or create prompt document
+ */
+function openOrCreatePromptDoc(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const doc = Document.getOrCreatePromptDoc();
+    const url = Document.getPromptDocUrl();
     
     return CardService.newActionResponseBuilder()
-      .setNotification(notification)
-      .setNavigation(CardService.newNavigation().updateCard(homeCard))
+      .setOpenLink(CardService.newOpenLink()
+        .setUrl(url)
+        .setOpenAs(CardService.OpenAs.FULL_SIZE))
       .build();
-  }, 'resetData')();
+  }, 'openOrCreatePromptDoc')();
 }
 
-// Universal action handlers
-function showSettingsUniversal(): GoogleAppsScript.Card_Service.UniversalActionResponse {
-  const settingsCard = showSettings({});
-  return CardService.newUniversalActionResponseBuilder()
-    .displayAddOnCards([settingsCard] as any)
-    .build();
+/**
+ * Open or create logs folder
+ */
+function openOrCreateLogsFolder(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const folder = Drive.getOrCreateLogsFolder();
+    const url = Drive.getLogsFolderUrl();
+    
+    // Ensure today's sheet exists
+    Sheets.getTodaySheet();
+    
+    return CardService.newActionResponseBuilder()
+      .setOpenLink(CardService.newOpenLink()
+        .setUrl(url)
+        .setOpenAs(CardService.OpenAs.FULL_SIZE))
+      .build();
+  }, 'openOrCreateLogsFolder')();
 }
 
-// Test function for development
+/**
+ * Open today's log sheet
+ */
+function openTodayLog(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const url = Sheets.getTodaySheetUrl();
+    
+    return CardService.newActionResponseBuilder()
+      .setOpenLink(CardService.newOpenLink()
+        .setUrl(url)
+        .setOpenAs(CardService.OpenAs.FULL_SIZE))
+      .build();
+  }, 'openTodayLog')();
+}
+
+/**
+ * Factory reset
+ */
+function factoryReset(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    State.clearAllSettings();
+    
+    return UI.createActionResponse(
+      UI.createNotification('All settings cleared'),
+      UI.createUpdateNavigation(buildSettingsCard('Factory reset complete'))
+    );
+  }, 'factoryReset')();
+}
+
+/**
+ * Generate reply action
+ */
+function generateReply(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return doGenerate(event, undefined, undefined);
+}
+
+/**
+ * Generate with intent
+ */
+function generateWithIntent(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  const intent = event.parameters?.intent || '';
+  return doGenerate(event, undefined, intent);
+}
+
+/**
+ * Core generation logic
+ */
+function doGenerate(
+  event: Types.GmailAddOnEvent,
+  toneOverride?: string,
+  intent?: string
+): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    // Validate requirements
+    Validation.ensureAllRequirements();
+    const validEvent = Validation.validateGmailEvent(event);
+    
+    // Get message and thread
+    const message = Gmail.getMessageById(validEvent.gmail!.messageId!, validEvent.gmail!.accessToken!);
+    const thread = Gmail.getThreadFromMessage(message);
+    const metadata = Gmail.getMessageMetadata(message);
+    const threadMetadata = Gmail.getThreadMetadata(thread);
+    
+    // Get mode and tone
+    const mode = Validation.getEmailMode(validEvent.formInputs);
+    const tone = Validation.getEmailTone(validEvent.formInputs, toneOverride);
+    
+    // Compute recipients
+    const recipients = Email.computeRecipients(thread, mode);
+    
+    // Get thread text
+    const fullText = Email.getThreadPlainText(thread);
+    const { text: threadText, truncated } = Email.truncateThreadText(fullText, Config.EMAIL.THREAD_MAX_CHARS);
+    
+    // Build prompt
+    const promptTemplate = Document.readPromptText();
+    const promptVars = Template.buildPromptVariables(
+      mode,
+      tone,
+      intent || '',
+      threadMetadata.firstSubject,
+      metadata.from,
+      recipients.to,
+      recipients.cc,
+      threadText
+    );
+    const promptText = Template.replaceVariables(promptTemplate, promptVars);
+    
+    // Call Gemini
+    const apiKey = Validation.ensureApiKey();
+    const geminiResult = Gemini.generateEmailReply(apiKey, promptText);
+    
+    // Log the generation
+    AppLogger.logEmailGeneration({
+      mode,
+      tone,
+      intent: intent || '',
+      subject: threadMetadata.firstSubject,
+      recipients,
+      success: geminiResult.success,
+      error: geminiResult.error,
+      apiResult: geminiResult.apiResult,
+      safetyInfo: geminiResult.safetyInfo,
+      truncated,
+      threadId: threadMetadata.id,
+      messageId: metadata.id
+    });
+    
+    if (!geminiResult.success || !geminiResult.response) {
+      return ErrorHandler.createErrorResponse(geminiResult.error || 'Failed to generate reply');
+    }
+    
+    // Build preview
+    const preview: Types.PreviewData = {
+      mode,
+      tone,
+      intent: intent || '',
+      subject: Email.formatSubjectForMode(threadMetadata.firstSubject, mode),
+      to: recipients.to,
+      cc: recipients.cc,
+      body: geminiResult.response.body,
+      safeToSend: geminiResult.response.safeToSend,
+      truncated
+    };
+    
+    return UI.createActionResponse(
+      UI.createNotification('Reply generated'),
+      UI.createPushNavigation(buildPreviewCard(preview))
+    );
+  }, 'doGenerate')();
+}
+
+// ===== COMPOSE ACTIONS =====
+
+/**
+ * Compose reply in thread
+ */
+function composeReplyInThread(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const validEvent = Validation.validateGmailEvent(event);
+    Gmail.setAccessToken(validEvent.gmail!.accessToken!);
+    
+    const body = event.parameters?.body || '';
+    return Gmail.buildDraftResponse(body);
+  }, 'composeReplyInThread')();
+}
+
+/**
+ * Compose reply all in thread
+ */
+function composeReplyAllInThread(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const validEvent = Validation.validateGmailEvent(event);
+    const message = Gmail.getMessageById(validEvent.gmail!.messageId!, validEvent.gmail!.accessToken!);
+    const thread = Gmail.getThreadFromMessage(message);
+    
+    const recipients = Email.computeRecipients(thread, 'ReplyAll');
+    const body = event.parameters?.body || '';
+    
+    return Gmail.buildDraftResponseWithRecipients(body, recipients.to, recipients.cc);
+  }, 'composeReplyAllInThread')();
+}
+
+/**
+ * Compose forward in thread
+ */
+function composeForwardInThread(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const validEvent = Validation.validateGmailEvent(event);
+    Gmail.setAccessToken(validEvent.gmail!.accessToken!);
+    
+    const body = event.parameters?.body || '';
+    const subject = event.parameters?.subject || '';
+    
+    return Gmail.buildDraftResponseWithSubject(body, subject);
+  }, 'composeForwardInThread')();
+}
+
+/**
+ * Use in standalone compose
+ */
+function useInComposeStandalone(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.GmailDraftActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const params = event.parameters || {};
+    
+    const mode = params.mode || 'Reply';
+    let subject = params.subject || '';
+    const body = params.body || '';
+    const to = params.to ? params.to.split(',') : [];
+    const cc = params.cc ? params.cc.split(',') : [];
+    
+    // Adjust subject for non-forward modes
+    if (mode !== 'Forward') {
+      subject = `Re: ${subject.replace(/^Re:\s*/i, '').replace(/^Fwd:\s*/i, '')}`;
+    }
+    
+    return Gmail.buildFullDraftResponse(body, subject, to, cc);
+  }, 'useInComposeStandalone')();
+}
+
+// ===== TEST FUNCTION =====
+
+/**
+ * Test function for development
+ */
 function testAddon(): void {
-  AppLogger.info('Testing add-on');
-  const card = onHomepage();
-  AppLogger.info('Card created successfully', card);
+  AppLogger.info('Testing add-on', { version: Config.VERSION });
+  
+  try {
+    const card = onHomepage();
+    AppLogger.info('Homepage card created successfully');
+    
+    const settings = State.getSettings();
+    AppLogger.info('Current settings', settings);
+  } catch (error) {
+    AppLogger.error('Test failed', error);
+  }
 }
