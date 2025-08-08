@@ -29,7 +29,7 @@
       "error",
       {
         "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_|^(Config|Types|Contracts|Utils|Algorithms|CSUtils|CircuitBreaker|Validation|Template|Email|GmailUtils|Gemini|Document|DriveUtils|SheetsUtils|AppLogger|State|ErrorHandler|UI|Generation|onHomepage|onSettings|onGmailMessage|onComposeAction|buildSettingsCard|buildDetailCard|buildPreviewCard|saveSettings|testApiKey|openOrCreatePromptDoc|openOrCreateLogsFolder|openTodayLog|factoryReset|generateReply|generateWithIntent|generateAndOpenReply|insertLastSuggestionInCompose|doGenerate|composeReplyInThread|composeReplyAllInThread|composeForwardInThread|useInComposeStandalone|testAddon)$"
+        "varsIgnorePattern": "^_|^(Config|Types|Contracts|Utils|Algorithms|CSUtils|CircuitBreaker|Validation|Template|Email|GmailUtils|Gemini|Document|DriveUtils|SheetsUtils|AppLogger|State|ErrorHandler|UI|Generation|onHomepage|onSettings|onGmailMessage|onComposeAction|buildSettingsCard|buildQuickReplyCard|buildPreviewCard|saveSettings|testApiKey|openOrCreatePromptDoc|openOrCreateLogsFolder|openTodayLog|factoryReset|generateReply|generateWithIntent|generateAndOpenReply|insertLastSuggestionInCompose|doGenerate|composeReplyInThread|composeReplyAllInThread|composeForwardInThread|useInComposeStandalone|testAddon|quickReplyWithIntent|setReplyMode|setReplyTone|quickComposeAction|setComposeMode|setComposeTone|generateCustom|onSettingsUniversal|openSettingsAction|backToThread|generateForCompose|createBannerSection|createApiSection|createDefaultsSection|createPromptDocSection|createLogsSection|createDangerZoneSection|logGeneration)$"
       }
     ],
     "@typescript-eslint/no-non-null-assertion": "warn",

@@ -80,7 +80,7 @@ function onSettings(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Servi
 }
 
 /**
- * Gmail message contextual trigger
+ * Gmail message contextual trigger - Uses unified quick reply interface
  */
 function onGmailMessage(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
   return ErrorHandler.wrapWithErrorHandling(() => {
@@ -92,12 +92,8 @@ function onGmailMessage(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Se
       return buildSettingsCard(`Setup required: ${missing.join(', ')}`);
     }
     
-    // Validate event
-    if (!event || !event.gmail || !event.gmail.messageId) {
-      return buildDetailCard(undefined, 'Open an email to generate replies');
-    }
-    
-    return buildDetailCard(event);
+    // Use unified quick reply interface
+    return buildQuickReplyCard(event, false);
   }, 'onGmailMessage')();
 }
 
@@ -125,23 +121,14 @@ function insertLastSuggestionInCompose(_event: Types.GmailAddOnEvent): GoogleApp
 }
 
 /**
- * Compose trigger
+ * Compose trigger - Uses unified quick reply interface
  */
-function onComposeAction(_event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
+function onComposeAction(event?: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.Card {
   return ErrorHandler.wrapWithErrorHandling(() => {
     AppLogger.info('Compose action triggered');
-    const settings = State.getSettings();
     
-    return UI.createCard(
-      UI.createHeader(Config.APP_NAME, 'Compose Helper'),
-      UI.createSection(
-        UI.createDropdown('mode', 'Mode', Config.EMAIL.MODES, settings.defaultMode),
-        UI.createDropdown('tone', 'Tone', Config.EMAIL.TONES, settings.defaultTone),
-        UI.createTextInput('intent', 'What would you like to say?', ''),
-        UI.createButton('Generate Draft', 'generateForCompose', {}, CardService.TextButtonStyle.FILLED),
-        UI.createButton('Insert Last Suggestion', 'insertLastSuggestionInCompose', {}, CardService.TextButtonStyle.TEXT)
-      )
-    );
+    // Use unified quick reply interface (compose mode)
+    return buildQuickReplyCard(event, true);
   }, 'onComposeAction')();
 }
 
@@ -252,55 +239,153 @@ function createDangerZoneSection(): GoogleAppsScript.Card_Service.CardSection {
 }
 
 /**
- * Build detail card for email thread
+ * BUILD UNIFIED QUICK REPLY CARD - ONE INTERFACE TO RULE THEM ALL!
+ * Works for both message view and compose view
+ * No duplicate functionality, clean UX
  */
-function buildDetailCard(_event?: Types.GmailAddOnEvent, banner?: string): GoogleAppsScript.Card_Service.Card {
+function buildQuickReplyCard(event?: Types.GmailAddOnEvent, isCompose: boolean = false): GoogleAppsScript.Card_Service.Card {
   const settings = State.getSettings();
   const sections: GoogleAppsScript.Card_Service.CardSection[] = [];
   
-  // Banner
-  if (banner) {
-    sections.push(UI.createSection(
-      UI.createTextParagraph(`⚠️ ${banner}`)
-    ));
+  // Show thread context ONLY in message view (not in compose)
+  if (!isCompose && event?.gmail?.messageId && event?.gmail?.accessToken) {
+    try {
+      GmailUtils.setAccessToken(event.gmail.accessToken);
+      const message = GmailUtils.getMessageById(event.gmail.messageId, event.gmail.accessToken);
+      const metadata = GmailUtils.getMessageMetadata(message);
+      const thread = GmailUtils.getThreadFromMessage(message);
+      
+      const from = metadata?.from || '';
+      const fromParts = from.split('<');
+      const fromName = fromParts[0] ? fromParts[0].trim() : 'Unknown';
+      const subject = metadata?.subject || 'No subject';
+      const msgCount = thread?.getMessages()?.length || 0;
+      
+      sections.push(UI.createSection(
+        UI.createTextParagraph(`📧 ${subject}`),
+        UI.createTextParagraph(`From: ${fromName} • ${msgCount} msgs`)
+      ));
+    } catch (e) {
+      // Silent fail - just don't show context
+    }
   }
   
-  // Generation controls
-  // Generate & Insert button using ComposeAction for proper inline reply
-  const generateInsertButton = CardService.newTextButton()
-    .setText('Generate & Insert')
-    .setComposeAction(
-      CardService.newAction().setFunctionName('generateAndOpenReply'),
-      CardService.ComposedEmailType.REPLY_AS_DRAFT
-    );
+  // QUICK ACTIONS - Clean grid layout (3x3)
+  const quickActions = [
+    { icon: '✅', text: 'Yes', intent: 'Confirm and agree' },
+    { icon: '❌', text: 'No', intent: 'Politely decline' },
+    { icon: '📅', text: 'Schedule', intent: 'Schedule a meeting' },
+    { icon: '❓', text: 'Info?', intent: 'Need more information' },
+    { icon: '🙏', text: 'Thanks', intent: 'Thank you' },
+    { icon: '⏭️', text: 'Forward', intent: 'Will forward to right person' },
+    { icon: '🔄', text: 'Follow', intent: 'Following up' },
+    { icon: '📝', text: 'Summary', intent: 'Here is a summary' },
+    { icon: '⌛', text: 'Later', intent: 'Will respond later' }
+  ];
   
-  sections.push(UI.createSection(
-    UI.createDropdown('mode', 'Mode', Config.EMAIL.MODES, settings.defaultMode),
-    UI.createDropdown('tone', 'Tone', Config.EMAIL.TONES, settings.defaultTone),
-    UI.createButton('Generate Reply (Preview)', 'generateReply'),
-    generateInsertButton
-  ));
+  // Use different function for compose vs message context
+  const actionFunction = isCompose ? 'quickComposeAction' : 'quickReplyWithIntent';
   
-  // Fast actions
-  const intentButtons = Config.EMAIL.INTENTS.map(intent => 
-    UI.createButton(intent, 'generateWithIntent', { intent })
+  const actionButtons = quickActions.map(action =>
+    UI.createButton(
+      `${action.icon} ${action.text}`,
+      actionFunction,
+      { intent: action.intent },
+      CardService.TextButtonStyle.FILLED
+    )
   );
   
-  sections.push(UI.createSectionWithHeader('Quick Actions',
-    UI.createButtonSet(intentButtons),
-    UI.createTextParagraph('Note: Long threads may be truncated for reliability.')
+  sections.push(UI.createSectionWithHeader('⚡ Quick Actions',
+    UI.createButtonSet(actionButtons.slice(0, 3)),
+    UI.createButtonSet(actionButtons.slice(3, 6)),
+    UI.createButtonSet(actionButtons.slice(6, 9))
   ));
   
-  // Settings link
+  // MODE & TONE - Compact single row
+  const modeButtons = [
+    UI.createButton(
+      settings.defaultMode === 'Reply' ? '● Reply' : 'Reply',
+      isCompose ? 'setComposeMode' : 'setReplyMode',
+      { mode: 'Reply' },
+      settings.defaultMode === 'Reply' ? CardService.TextButtonStyle.FILLED : CardService.TextButtonStyle.TEXT
+    ),
+    UI.createButton(
+      settings.defaultMode === 'ReplyAll' ? '● All' : 'All',
+      isCompose ? 'setComposeMode' : 'setReplyMode',
+      { mode: 'ReplyAll' },
+      settings.defaultMode === 'ReplyAll' ? CardService.TextButtonStyle.FILLED : CardService.TextButtonStyle.TEXT
+    ),
+    UI.createButton(
+      settings.defaultMode === 'Forward' ? '● Fwd' : 'Fwd',
+      isCompose ? 'setComposeMode' : 'setReplyMode', 
+      { mode: 'Forward' },
+      settings.defaultMode === 'Forward' ? CardService.TextButtonStyle.FILLED : CardService.TextButtonStyle.TEXT
+    )
+  ];
+  
+  const toneButtons = [
+    UI.createButton(
+      settings.defaultTone === 'Professional' ? '● Pro' : 'Pro',
+      isCompose ? 'setComposeTone' : 'setReplyTone',
+      { tone: 'Professional' },
+      settings.defaultTone === 'Professional' ? CardService.TextButtonStyle.FILLED : CardService.TextButtonStyle.TEXT
+    ),
+    UI.createButton(
+      settings.defaultTone === 'Friendly' ? '● Friendly' : 'Friendly',
+      isCompose ? 'setComposeTone' : 'setReplyTone',
+      { tone: 'Friendly' },
+      settings.defaultTone === 'Friendly' ? CardService.TextButtonStyle.FILLED : CardService.TextButtonStyle.TEXT
+    ),
+    UI.createButton(
+      settings.defaultTone === 'Casual' ? '● Casual' : 'Casual',
+      isCompose ? 'setComposeTone' : 'setReplyTone',
+      { tone: 'Casual' },
+      settings.defaultTone === 'Casual' ? CardService.TextButtonStyle.FILLED : CardService.TextButtonStyle.TEXT
+    )
+  ];
+  
   sections.push(UI.createSection(
-    UI.createButton('Settings', 'openSettingsAction')
+    UI.createButtonSet([...modeButtons, ...toneButtons])
+  ));
+  
+  // Custom input field
+  sections.push(UI.createSection(
+    UI.createTextInput('customIntent', 'Custom message...', ''),
+    UI.createButton('Generate', isCompose ? 'generateForCompose' : 'generateCustom', {}, CardService.TextButtonStyle.FILLED)
+  ));
+  
+  // PRIMARY ACTION - Different for message vs compose
+  if (!isCompose && event?.gmail?.messageId) {
+    // Message view: Generate & Insert button
+    const generateInsertButton = CardService.newTextButton()
+      .setText('🚀 Generate & Open Reply')
+      .setComposeAction(
+        CardService.newAction().setFunctionName('generateAndOpenReply'),
+        CardService.ComposedEmailType.REPLY_AS_DRAFT
+      );
+    sections.push(UI.createSection(generateInsertButton));
+  } else if (isCompose) {
+    // Compose view: Insert last suggestion if available
+    const cache = CacheService.getUserCache();
+    if (cache.get('AAM3_LAST_BODY')) {
+      sections.push(UI.createSection(
+        UI.createButton('📋 Insert Last Reply', 'insertLastSuggestionInCompose', {}, CardService.TextButtonStyle.FILLED)
+      ));
+    }
+  }
+  
+  // Settings link (minimal)
+  sections.push(UI.createSection(
+    UI.createButton('⚙️ Settings', 'openSettingsAction', {}, CardService.TextButtonStyle.TEXT)
   ));
   
   return UI.createCard(
-    UI.createHeader(Config.APP_NAME, 'Email Assistant'),
+    UI.createHeader(Config.APP_NAME, '⚡ Quick Reply'),
     ...sections
   );
 }
+
+// REMOVED buildDetailCard - Using unified buildQuickReplyCard instead
 
 /**
  * Build preview card
@@ -510,6 +595,239 @@ function generateWithIntent(event: Types.GmailAddOnEvent): GoogleAppsScript.Card
 }
 
 /**
+ * Quick reply with intent - for the new quick action buttons
+ */
+function quickReplyWithIntent(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ComposeActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    // Validate requirements
+    Validation.ensureAllRequirements();
+    const validEvent = Validation.validateGmailEvent(event);
+    
+    const intent = event.parameters?.intent || '';
+    
+    // Extract context
+    const context = Generation.extractContext(validEvent);
+    
+    // Build prompt with intent
+    const { promptText, truncated: promptTruncated } = Generation.buildPromptText({
+      ...context,
+      intent
+    });
+    
+    // Call Gemini
+    const apiKey = Validation.ensureApiKey();
+    const geminiResult = Gemini.generateEmailReply(apiKey, promptText);
+    
+    // Log the generation
+    const fullTruncated = context.truncated || promptTruncated;
+    logGeneration({ ...context, truncated: fullTruncated }, intent, geminiResult);
+    
+    if (!geminiResult.success || !geminiResult.response) {
+      // Return empty compose action on error
+      return CardService.newComposeActionResponseBuilder().build();
+    }
+    
+    // Cache the generated body
+    CacheService.getUserCache().put('AAM3_LAST_BODY', geminiResult.response.body, 600);
+    
+    // Create draft and open
+    GmailUtils.setAccessToken(validEvent.gmail!.accessToken!);
+    const message = GmailUtils.getMessageById(validEvent.gmail!.messageId!, validEvent.gmail!.accessToken!);
+    const html = Utils.toHtml(geminiResult.response.body);
+    
+    const draft = (context.mode === 'ReplyAll')
+      ? message.getThread().createDraftReplyAll('', { htmlBody: html })
+      : (context.mode === 'Forward')
+      ? message.getThread().createDraftReply(`Fwd: ${message.getSubject()}`, { htmlBody: html })
+      : message.createDraftReply('', { htmlBody: html });
+    
+    return CardService.newComposeActionResponseBuilder()
+      .setGmailDraft(draft)
+      .build();
+  }, 'quickReplyWithIntent')();
+}
+
+/**
+ * Set reply mode (for message view)
+ */
+function setReplyMode(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const mode = event.parameters?.mode || 'Reply';
+    const settings = State.getSettings();
+    settings.defaultMode = mode as Types.EmailMode;
+    State.saveSettings(settings);
+    
+    return UI.createActionResponse(
+      UI.createNotification(`Mode: ${mode}`),
+      UI.createUpdateNavigation(buildQuickReplyCard(event, false))
+    );
+  }, 'setReplyMode')();
+}
+
+/**
+ * Set reply tone (for message view)
+ */
+function setReplyTone(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const tone = (event.parameters as any)?.tone || 'Professional';
+    const settings = State.getSettings();
+    settings.defaultTone = tone as Types.EmailTone;
+    State.saveSettings(settings);
+    
+    return UI.createActionResponse(
+      UI.createNotification(`Tone: ${tone}`),
+      UI.createUpdateNavigation(buildQuickReplyCard(event, false))
+    );
+  }, 'setReplyTone')();
+}
+
+/**
+ * Quick compose action for compose UI
+ */
+function quickComposeAction(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const intent = event.parameters?.intent || '';
+    const settings = State.getSettings();
+    
+    if (!settings.apiKey) {
+      return GmailUtils.buildDraftResponse('Please configure your Gemini API key in settings.');
+    }
+    
+    // Simple prompt for quick compose
+    const prompt = `Write an email to ${intent}.
+
+Generate a complete, professional email.
+
+Respond with just the email content. Start with "Subject: [your subject]" on the first line, then a blank line, then the email body.`;
+    
+    const result = Gemini.callGenerateContent(settings.apiKey, prompt);
+    
+    if (result.code !== 200 || !result.text) {
+      return GmailUtils.buildDraftResponse(`Error: Failed to generate (${result.code})`);
+    }
+    
+    // Extract subject and body
+    const lines = result.text.split('\n');
+    let subject = '';
+    let body = result.text;
+    
+    if (lines && lines.length > 0 && lines[0] && lines[0].startsWith('Subject:')) {
+      subject = lines[0].replace('Subject:', '').trim();
+      body = lines.slice(2).join('\n'); // Skip subject and blank line
+    }
+    
+    // Build response with subject if found
+    if (subject) {
+      return CardService.newUpdateDraftActionResponseBuilder()
+        .setUpdateDraftSubjectAction(CardService.newUpdateDraftSubjectAction()
+          .addUpdateSubject(subject))
+        .setUpdateDraftBodyAction(CardService.newUpdateDraftBodyAction()
+          .addUpdateContent(Utils.toHtml(body), CardService.ContentType.MUTABLE_HTML)
+          .setUpdateType(CardService.UpdateDraftBodyType.IN_PLACE_INSERT))
+        .build();
+    }
+    
+    return GmailUtils.buildDraftResponse(body);
+  }, 'quickComposeAction')();
+}
+
+/**
+ * Set compose mode (for compose view)
+ */
+function setComposeMode(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const mode = event.parameters?.mode || 'Reply';
+    const settings = State.getSettings();
+    settings.defaultMode = mode as Types.EmailMode;
+    State.saveSettings(settings);
+    
+    return UI.createActionResponse(
+      UI.createNotification(`Mode: ${mode}`),
+      UI.createUpdateNavigation(buildQuickReplyCard(event, true))
+    );
+  }, 'setComposeMode')();
+}
+
+/**
+ * Set compose tone (for compose view)
+ */
+function setComposeTone(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const tone = (event.parameters as any)?.tone || 'Professional';
+    const settings = State.getSettings();
+    settings.defaultTone = tone as Types.EmailTone;
+    State.saveSettings(settings);
+    
+    return UI.createActionResponse(
+      UI.createNotification(`Tone: ${tone}`),
+      UI.createUpdateNavigation(buildQuickReplyCard(event, true))
+    );
+  }, 'setComposeTone')();
+}
+
+/**
+ * Generate custom reply from text input (message view)
+ */
+function generateCustom(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.ComposeActionResponse {
+  return ErrorHandler.wrapWithErrorHandling(() => {
+    const customIntent = (event.formInputs as any)?.customIntent?.[0] || '';
+    
+    if (!customIntent) {
+      return CardService.newComposeActionResponseBuilder().build();
+    }
+    
+    // Validate requirements
+    Validation.ensureAllRequirements();
+    const validEvent = Validation.validateGmailEvent(event);
+    
+    // Extract context
+    const context = Generation.extractContext(validEvent);
+    
+    // Build prompt with custom intent
+    const { promptText, truncated: promptTruncated } = Generation.buildPromptText({
+      ...context,
+      intent: customIntent
+    });
+    
+    // Call Gemini
+    const apiKey = Validation.ensureApiKey();
+    const geminiResult = Gemini.generateEmailReply(apiKey, promptText);
+    
+    // Log the generation
+    const fullTruncated = context.truncated || promptTruncated;
+    logGeneration({ ...context, truncated: fullTruncated }, customIntent, geminiResult);
+    
+    if (!geminiResult.success || !geminiResult.response) {
+      return CardService.newComposeActionResponseBuilder().build();
+    }
+    
+    // Cache and create draft
+    CacheService.getUserCache().put('AAM3_LAST_BODY', geminiResult.response.body, 600);
+    
+    const accessToken = validEvent.gmail?.accessToken;
+    const messageId = validEvent.gmail?.messageId;
+    
+    if (!accessToken || !messageId) {
+      return CardService.newComposeActionResponseBuilder().build();
+    }
+    
+    GmailUtils.setAccessToken(accessToken);
+    const message = GmailUtils.getMessageById(messageId, accessToken);
+    const html = Utils.toHtml(geminiResult.response.body);
+    
+    const draft = (context.mode === 'ReplyAll')
+      ? message.getThread().createDraftReplyAll('', { htmlBody: html })
+      : (context.mode === 'Forward')
+      ? message.getThread().createDraftReply(`Fwd: ${message.getSubject()}`, { htmlBody: html })
+      : message.createDraftReply('', { htmlBody: html });
+    
+    return CardService.newComposeActionResponseBuilder()
+      .setGmailDraft(draft)
+      .build();
+  }, 'generateCustom')();
+}
+
+/**
  * Generate and open reply in compose window (proper inline reply)
  * Uses ComposeActionResponse to open reply editor in thread
  */
@@ -709,25 +1027,23 @@ function useInComposeStandalone(event: Types.GmailAddOnEvent): GoogleAppsScript.
  */
 function generateForCompose(event: Types.GmailAddOnEvent): GoogleAppsScript.Card_Service.UpdateDraftActionResponse {
   return ErrorHandler.wrapWithErrorHandling(() => {
-    const mode = Validation.getEmailMode(event.formInputs);
-    const tone = Validation.getEmailTone(event.formInputs);
-    const intent = event.formInputs?.intent?.[0] || '';
+    const settings = State.getSettings();
+    const customIntent = (event.formInputs as any)?.customIntent?.[0] || '';
     
-    if (!intent) {
+    if (!customIntent) {
       return GmailUtils.buildDraftResponse('Please describe what you would like to say.');
     }
     
     // Simple prompt for compose mode
     const prompt = `Write an email with the following requirements:
-- Mode: ${mode}
-- Tone: ${tone}
-- Content: ${intent}
+- Mode: ${settings.defaultMode}
+- Tone: ${settings.defaultTone}
+- Content: ${customIntent}
 
 Generate a complete email with an appropriate subject line.
 
 Respond with just the email content. Start with "Subject: [your subject]" on the first line, then a blank line, then the email body.`;
     
-    const settings = State.getSettings();
     if (!settings.apiKey) {
       return GmailUtils.buildDraftResponse('Please configure your Gemini API key in settings.');
     }

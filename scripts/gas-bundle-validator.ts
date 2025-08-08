@@ -28,7 +28,7 @@ const REQUIRED_FUNCTIONS = [
   'onSettings', 
   'onGmailMessage',
   'buildSettingsCard',
-  'buildDetailCard',
+  'buildQuickReplyCard',
   'saveSettings'
 ];
 
